@@ -10,6 +10,10 @@
 $(window).on("load", function(){
     setTimeout(function() {$("#preloader").fadeOut();}, 1000); 
     //$("#preloader").fadeOut();
-    
 });
 
+
+//TEST DATA RETRIEVAL
+$.get("data.json", function(data){
+    console.log(data);
+});
