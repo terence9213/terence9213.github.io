@@ -1,0 +1,62 @@
+[
+ {
+   "keycode": 65,
+   "note": "C4",
+   "frequency": 261.6255653005985
+ },
+ {
+   "keycode": 87,
+   "note": "C#4",
+   "frequency": 277.182630976872
+ },
+ {
+   "keycode": 83,
+   "note": "D4",
+   "frequency": 293.66476791740746
+ },
+ {
+   "keycode": 69,
+   "note": "D#4",
+   "frequency": 311.1269837220808
+ },
+ {
+   "keycode": 68,
+   "note": "E4",
+   "frequency": 329.62755691286986
+ },
+ {
+   "keycode": 70,
+   "note": "F4",
+   "frequency": 349.2282314330038
+ },
+ {
+   "keycode": 84,
+   "note": "F#4",
+   "frequency": 369.99442271163434
+ },
+ {
+   "keycode": 71,
+   "note": "G4",
+   "frequency": 391.99543598174927
+ },
+ {
+   "keycode": 89,
+   "note": "G#4",
+   "frequency": 415.3046975799451
+ },
+ {
+   "keycode": 72,
+   "note": "A4",
+   "frequency": 440
+ },
+ {
+   "keycode": 85,
+   "note": "A#4",
+   "frequency": 466.1637615180899
+ },
+ {
+   "keycode": 74,
+   "note": "B4",
+   "frequency": 493.8833012561241
+ }
+]

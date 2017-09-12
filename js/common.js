@@ -14,6 +14,8 @@ $(window).on("load", function(){
 
 
 //TEST DATA RETRIEVAL
-$.get("data.json", function(data){
+/*
+$.get("notemap.json", function(data){
     console.log(data);
 });
+ */
