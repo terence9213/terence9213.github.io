@@ -40,10 +40,10 @@ function init(){
 
 
     gainNode.gain.value = 0.1;
-    oscillator.frequency.value = 440;
+    //oscillator.frequency.value = 440;
 
     //oscillator.detune.value = 100; // value in cents
-    oscillator.start(0);
+    //oscillator.start(0);
     
     // Retrieve Notemap
     $.getJSON("keycodenotemap.json", function(data){
@@ -106,9 +106,37 @@ function wait(ms) {
 
 //TEST KEYBOARD INPUT
 
+var oscNodeArray = [];
+var oscNodeMap = new Map();
+
+document.addEventListener("keydown", function(event){
+    console.log(event.keyCode);
+    var freq = keycodemap.get(event.keyCode);
+    if(freq && !oscNodeMap.has(freq)){
+        var osc = audioCtx.createOscillator();
+        osc.frequency.value = freq;
+        osc.connect(gainNode);
+        osc.start(0);
+        oscNodeMap.set(freq, osc);
+    }
+    
+});
+
+
+document.addEventListener("keyup", function(event){
+    console.log(event.keyCode);
+    var freq = keycodemap.get(event.keyCode);
+    var osc = oscNodeMap.get(freq);
+    if(osc){
+        osc.stop(0);
+        osc.disconnect();
+        oscNodeMap.delete(freq);
+    }
+});
+
 //workaround for individual notes
 var down = false;
-
+/*
 document.addEventListener("keydown", function(event){
     console.log(event.keyCode);
     if(!down){
@@ -132,6 +160,9 @@ document.addEventListener("keyup", function(event){
         toggleMute();
     }
 });
+
+*/
+
 
 // Test volume slider
 document.getElementById("volume-slider").addEventListener("change", function(event){

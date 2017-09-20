@@ -58,5 +58,10 @@
    "keycode": 74,
    "note": "B4",
    "frequency": 493.8833012561241
+ },
+ {
+   "keycode": 75,
+   "note": "C5",
+   "frequency": 523.2511306011974
  }
 ]
