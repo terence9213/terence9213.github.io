@@ -84,6 +84,9 @@ function toggleMute(){
     
 }
 
+//WAVEFROM
+var oscWaveType = "sine"; //default
+
 //ADSR 
 var attack = 0.1; //seconds
 var decay = 0.1; //seconds
@@ -102,6 +105,7 @@ document.addEventListener("keydown", function(event){
         var startTime = audioCtx.currentTime;
         var osc = audioCtx.createOscillator();
         var gainNode = audioCtx.createGain();
+        osc.type = oscWaveType;
         osc.frequency.value = freq;
         osc.connect(gainNode);
         gainNode.connect(masterGain);
@@ -176,6 +180,13 @@ document.addEventListener("keyup", function(event){
 document.getElementById("volume-slider").addEventListener("change", function(event){
     console.log(event.target.value);
     setVolume(event.target.value);
+});
+
+// Oscillator wave type picker
+document.getElementById("osc-wave-type-picker").addEventListener("change", function(){
+    //Take note of scroll-blocking violation! Fix later!
+    console.log(this.value);
+    oscWaveType = this.value;
 });
 
 //ADSR SLIDERS
