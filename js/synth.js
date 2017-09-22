@@ -17,8 +17,8 @@ var audioCtx = new AudioContext();
 // -- Create nodes -- //
  
 // Create Oscillator and gain node
-var oscillator = audioCtx.createOscillator();
-var gainNode = audioCtx.createGain();
+//var oscillator = audioCtx.createOscillator();
+var masterGain = audioCtx.createGain();
 
 var initComplete = false;
 var mute = true;
@@ -31,15 +31,16 @@ var keycodemap = null;
 init();
 
 // INIT SYNTH
+//Move init statement here!
 function init(){
     console.log("INIT ---");
     // Connect Nodes
     //  Oscillator >> Gain >> audioCtx.Destination
-    oscillator.connect(gainNode);
+    //oscillator.connect(gainNode);
     //gainNode.connect(audioCtx.destination);
 
 
-    gainNode.gain.value = 0.1;
+    masterGain.gain.value = 0.1;
     //oscillator.frequency.value = 440;
 
     //oscillator.detune.value = 100; // value in cents
@@ -68,56 +69,52 @@ function parseNotemap(JSONData){
 }
 
 function setVolume(vol){
-    gainNode.gain.value = vol;
+    masterGain.gain.value = vol;
 }
 
 function toggleMute(){
     if(mute){
-        gainNode.connect(audioCtx.destination);
+        masterGain.connect(audioCtx.destination);
         mute = false;
     }
     else{
-        gainNode.disconnect(audioCtx.destination);
+        masterGain.disconnect(audioCtx.destination);
         mute = true;
     }
     
 }
 
+//ADSR 
+var attack = 0.1; //seconds
+var decay = 0.1; //seconds
+var sustain = 0.5; //amplitude
+var release = 0.1; //seconds
 
-function playTune(notes){
-    toggleMute();
-    for(var i = 0; i < notes.length ; i++)
-    {
-        oscillator.frequency.value = notes[i];
-        wait(300);
-    }
-    toggleMute();
-}
+//https://www.keithmcmillen.com/blog/making-music-in-the-browser-web-audio-midi-envelope-generator/
 
-function wait(ms) {
-    var now = new Date().getTime();
-    var end = now + ms;
-    while(now < end){
-        now = new Date().getTime();
-    }
-}
-
-
-
-//TEST KEYBOARD INPUT
-
-var oscNodeArray = [];
+//KEYBOARD INPUT
 var oscNodeMap = new Map();
 
 document.addEventListener("keydown", function(event){
     console.log(event.keyCode);
     var freq = keycodemap.get(event.keyCode);
     if(freq && !oscNodeMap.has(freq)){
+        var startTime = audioCtx.currentTime;
         var osc = audioCtx.createOscillator();
+        var gainNode = audioCtx.createGain();
         osc.frequency.value = freq;
         osc.connect(gainNode);
+        gainNode.connect(masterGain);
         osc.start(0);
-        oscNodeMap.set(freq, osc);
+        oscNodeMap.set(freq, [osc,gainNode]);
+        
+        //ADSR Evnelope
+        gainNode.gain.cancelScheduledValues(0);
+        gainNode.gain.setValueAtTime(0, startTime);
+        //Attack
+        gainNode.gain.linearRampToValueAtTime(1, startTime + attack);
+        //Decay to Sustain
+        gainNode.gain.linearRampToValueAtTime(sustain, startTime + attack + decay);
     }
     
 });
@@ -126,16 +123,27 @@ document.addEventListener("keydown", function(event){
 document.addEventListener("keyup", function(event){
     console.log(event.keyCode);
     var freq = keycodemap.get(event.keyCode);
-    var osc = oscNodeMap.get(freq);
-    if(osc){
-        osc.stop(0);
+    var oscGainPair = oscNodeMap.get(freq);
+    if(oscGainPair){
+        var osc = oscGainPair[0];
+        var gainNode = oscGainPair[1];
+        var startTime = audioCtx.currentTime;
+        //ADSR Evelope
+        gainNode.gain.cancelScheduledValues(0);
+        gainNode.gain.setValueAtTime(gainNode.gain.value, startTime);
+        gainNode.gain.linearRampToValueAtTime(0, startTime + release);
+        
+        osc.stop(startTime + release);
+        /*osc.stop(0);
         osc.disconnect();
+        gainNode.disconnect();*/
         oscNodeMap.delete(freq);
+        console.log(oscNodeMap);
     }
 });
 
 //workaround for individual notes
-var down = false;
+//var down = false;
 /*
 document.addEventListener("keydown", function(event){
     console.log(event.keyCode);
@@ -168,6 +176,32 @@ document.addEventListener("keyup", function(event){
 document.getElementById("volume-slider").addEventListener("change", function(event){
     console.log(event.target.value);
     setVolume(event.target.value);
+});
+
+//ADSR SLIDERS
+//Attack
+document.getElementById("attack-slider").addEventListener("change", function(event){
+    console.log(event.target.value);
+    attack = parseFloat(event.target.value);
+    $("#attack-value").text(attack);
+});
+//Decay
+document.getElementById("decay-slider").addEventListener("change", function(event){
+    console.log(event.target.value);
+    decay = parseFloat(event.target.value);
+    $("#decay-value").text(decay);
+});
+//Sustain
+document.getElementById("sustain-slider").addEventListener("change", function(event){
+    console.log(event.target.value);
+    sustain = parseFloat(event.target.value);
+    $("#sustain-value").text(sustain);
+});
+//Release
+document.getElementById("release-slider").addEventListener("change", function(event){
+    console.log(event.target.value);
+    release = parseFloat(event.target.value);
+    $("#release-value").text(release);
 });
 
 /*
