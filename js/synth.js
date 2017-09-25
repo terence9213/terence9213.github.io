@@ -20,12 +20,20 @@ var audioCtx = new AudioContext();
 //var oscillator = audioCtx.createOscillator();
 var masterGain = audioCtx.createGain();
 
+//create analyser and connect master gain to analyser
+var analyser = audioCtx.createAnalyser();
+masterGain.connect(analyser);
+
 var initComplete = false;
 var mute = true;
 
 var notemap = null;
 var keycodemap = null;
 
+var canvas = document.getElementById("oscilloscope");
+var canvasCtx = canvas.getContext("2d");
+var bufferLength = null;
+var dataArray = null;
 
 //INIT HERE
 init();
@@ -34,28 +42,60 @@ init();
 //Move init statement here!
 function init(){
     console.log("INIT ---");
-    // Connect Nodes
-    //  Oscillator >> Gain >> audioCtx.Destination
-    //oscillator.connect(gainNode);
-    //gainNode.connect(audioCtx.destination);
-
-
-    masterGain.gain.value = 0.1;
-    //oscillator.frequency.value = 440;
-
-    //oscillator.detune.value = 100; // value in cents
-    //oscillator.start(0);
+    masterGain.gain.value = 0.5;
     
     // Retrieve Notemap
     $.getJSON("keycodenotemap.json", function(data){
         parseNotemap(data);
         
         if(notemap && keycodemap)   
-        { initComplete = true; }
+        { initComplete = true; initAnalyser();}
         else 
         { console.log("-- notemap null --"); }
+        
         console.log("initComplete:" + initComplete);
     });
+}
+
+// INIT ANALYSER OSCILLOSCOPE
+function initAnalyser(){
+    analyser.fftSize = 2048;
+    bufferLength = analyser.frequencyBinCount;
+    dataArray = new Uint8Array(bufferLength);
+    var sliceWidth = canvas.width / bufferLength;
+    
+    canvasCtx.fillStyle = "rgb(0,0,0)";
+    canvasCtx.lineWidth = 1.5;
+    canvasCtx.strokeStyle = "rgb(0,255,0)";
+    var draw = function(){
+        requestAnimationFrame(draw);
+        
+        //Get data from analyser
+        analyser.getByteTimeDomainData(dataArray);
+        
+        canvasCtx.clearRect(0,0, canvas.width, canvas.height);
+        canvasCtx.fillRect(0,0, canvas.width, canvas.height);
+        canvasCtx.beginPath();
+        
+        //first point
+        var x = 0;
+        var y = (dataArray[0]/128) * (canvas.height/2);
+        canvasCtx.moveTo(x, y);
+        
+        for( i = 1 ; i < bufferLength ; i++){
+            x += sliceWidth;
+            y = (dataArray[i]/128) * (canvas.height/2);
+            canvasCtx.lineTo(x, y);
+            
+        }
+        //last point
+        canvasCtx.lineTo(canvas.width, canvas.height);
+        canvasCtx.stroke();
+        
+    };
+    draw();
+    
+    
 }
 
 function parseNotemap(JSONData){
@@ -88,10 +128,10 @@ function toggleMute(){
 var oscWaveType = "sine"; //default
 
 //ADSR 
-var attack = 0.1; //seconds
-var decay = 0.1; //seconds
-var sustain = 0.5; //amplitude
-var release = 0.1; //seconds
+var attack = 0.2; //seconds
+var decay = 0.3; //seconds
+var sustain = 0.8; //amplitude
+var release = 0.3; //seconds
 
 //https://www.keithmcmillen.com/blog/making-music-in-the-browser-web-audio-midi-envelope-generator/
 
@@ -185,32 +225,28 @@ document.getElementById("volume-slider").addEventListener("change", function(eve
 // Oscillator wave type picker
 document.getElementById("osc-wave-type-picker").addEventListener("change", function(){
     //Take note of scroll-blocking violation! Fix later!
-    console.log(this.value);
-    oscWaveType = this.value;
+    oscWaveType = document.querySelector("input[name='osc-wave-type']:checked").value;
+    console.log(oscWaveType);
 });
 
 //ADSR SLIDERS
 //Attack
-document.getElementById("attack-slider").addEventListener("change", function(event){
-    console.log(event.target.value);
+document.getElementById("attack-slider").addEventListener("input", function(event){
     attack = parseFloat(event.target.value);
     $("#attack-value").text(attack);
 });
 //Decay
-document.getElementById("decay-slider").addEventListener("change", function(event){
-    console.log(event.target.value);
+document.getElementById("decay-slider").addEventListener("input", function(event){
     decay = parseFloat(event.target.value);
     $("#decay-value").text(decay);
 });
 //Sustain
-document.getElementById("sustain-slider").addEventListener("change", function(event){
-    console.log(event.target.value);
+document.getElementById("sustain-slider").addEventListener("input", function(event){
     sustain = parseFloat(event.target.value);
     $("#sustain-value").text(sustain);
 });
 //Release
-document.getElementById("release-slider").addEventListener("change", function(event){
-    console.log(event.target.value);
+document.getElementById("release-slider").addEventListener("input", function(event){
     release = parseFloat(event.target.value);
     $("#release-value").text(release);
 });
