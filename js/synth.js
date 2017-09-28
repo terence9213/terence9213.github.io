@@ -139,53 +139,7 @@ var release = 0.3; //seconds
 // SYNTH INPUT
 //SYNTH DOWN
 function synthDown(freq){
-    var startTime = audioCtx.currentTime;
-    var osc = audioCtx.createOscillator();
-    var gainNode = audioCtx.createGain();
-    osc.type = oscWaveType;
-    osc.frequency.value = freq;
-    osc.connect(gainNode);
-    gainNode.connect(masterGain);
-    osc.start(0);
-    oscNodeMap.set(freq, [osc,gainNode]);
-
-    //ADSR Evnelope
-    gainNode.gain.cancelScheduledValues(0);
-    gainNode.gain.setValueAtTime(0, startTime);
-    //Attack
-    gainNode.gain.linearRampToValueAtTime(1, startTime + attack);
-    //Decay to Sustain
-    gainNode.gain.linearRampToValueAtTime(sustain, startTime + attack + decay);
-};
-//SYNTH UP
-function synthUp(freq){
-    var startTime = audioCtx.currentTime;
-    var osc = audioCtx.createOscillator();
-    var gainNode = audioCtx.createGain();
-    osc.type = oscWaveType;
-    osc.frequency.value = freq;
-    osc.connect(gainNode);
-    gainNode.connect(masterGain);
-    osc.start(0);
-    oscNodeMap.set(freq, [osc,gainNode]);
-
-    //ADSR Evnelope
-    gainNode.gain.cancelScheduledValues(0);
-    gainNode.gain.setValueAtTime(0, startTime);
-    //Attack
-    gainNode.gain.linearRampToValueAtTime(1, startTime + attack);
-    //Decay to Sustain
-    gainNode.gain.linearRampToValueAtTime(sustain, startTime + attack + decay);
-};
-
-
-//KEYBOARD INPUT
-var oscNodeMap = new Map();
-
-document.addEventListener("keydown", function(event){
-    console.log(event.keyCode);
-    var freq = keycodemap.get(event.keyCode);
-    if(freq && !oscNodeMap.has(freq)){
+    if(!oscNodeMap.has(freq)){
         var startTime = audioCtx.currentTime;
         var osc = audioCtx.createOscillator();
         var gainNode = audioCtx.createGain();
@@ -195,7 +149,7 @@ document.addEventListener("keydown", function(event){
         gainNode.connect(masterGain);
         osc.start(0);
         oscNodeMap.set(freq, [osc,gainNode]);
-        
+
         //ADSR Evnelope
         gainNode.gain.cancelScheduledValues(0);
         gainNode.gain.setValueAtTime(0, startTime);
@@ -205,12 +159,9 @@ document.addEventListener("keydown", function(event){
         gainNode.gain.linearRampToValueAtTime(sustain, startTime + attack + decay);
     }
     
-});
-
-
-document.addEventListener("keyup", function(event){
-    console.log(event.keyCode);
-    var freq = keycodemap.get(event.keyCode);
+};
+//SYNTH UP
+function synthUp(freq){
     var oscGainPair = oscNodeMap.get(freq);
     if(oscGainPair){
         var osc = oscGainPair[0];
@@ -220,34 +171,69 @@ document.addEventListener("keyup", function(event){
         gainNode.gain.cancelScheduledValues(0);
         gainNode.gain.setValueAtTime(gainNode.gain.value, startTime);
         gainNode.gain.linearRampToValueAtTime(0, startTime + release);
-        
+
         osc.stop(startTime + release);
         /*osc.stop(0);
         osc.disconnect();
         gainNode.disconnect();*/
         oscNodeMap.delete(freq);
-        console.log(oscNodeMap);
+        //console.log(oscNodeMap);
     }
+};
+
+
+//KEYBOARD INPUT
+var oscNodeMap = new Map();
+
+document.addEventListener("keydown", function(event){
+    //console.log(event.keyCode);
+    var freq = keycodemap.get(event.keyCode);
+    synthDown(freq);
 });
 
+
+document.addEventListener("keyup", function(event){
+    //console.log(event.keyCode);
+    var freq = keycodemap.get(event.keyCode);
+    synthUp(freq);
+});
+
+
+// MOUSE - KEYBOARD INPUT
 var mouseDown = false;
 
-// KEYBOARD ON-CLICK LISTENERS
 document.getElementById("keyboard").addEventListener("mousedown", function(event){
     event.preventDefault();
-    console.log(event.target.id);
+    mouseDown = true;
+    if(event.target.id !== "keyboard"){
+        var freq = notemap.get(event.target.id);
+        synthDown(freq);    
+    }
+        
 });
 document.getElementById("keyboard").addEventListener("mouseover", function(event){
     event.preventDefault();
-    console.log(event.target.id);
+    if(mouseDown && event.target.id !== "keyboard"){
+        var freq = notemap.get(event.target.id);
+        synthDown(freq);
+    }
 });
 document.getElementById("keyboard").addEventListener("mouseup", function(event){
     event.preventDefault();
-    console.log(event.target.id);
+    mouseDown = false;
+    if(event.target.id !== "keyboard"){
+        var freq = notemap.get(event.target.id);
+        synthUp(freq);
+    }
+    var freq = notemap.get(event.target.id);
+    synthUp(freq);
 });
 document.getElementById("keyboard").addEventListener("mouseout", function(event){
     event.preventDefault();
-    console.log("out");
+    if(mouseDown && event.target.id !== "keyboard"){
+        var freq = notemap.get(event.target.id);
+        synthUp(freq);
+    }
 });
 
 
