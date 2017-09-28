@@ -1,0 +1,20 @@
+/*
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+*/
+/* 
+    Created on : 28 Sep, 2017, 12:39:16 AM
+    Author     : User
+*/
+
+ul.keyboard{
+    list-style: none;
+}
+li.keyboard-key{
+    /*https://blog.mozilla.org/webdev/2009/02/20/cross-browser-inline-block/*/ 
+    display: -moz-inline-stack; /*workaround for firefox : not gonna fix for IE6/7*/ 
+    display: inline-block;
+    height: 100px;
+    border-style: solid;
+}

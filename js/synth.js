@@ -65,7 +65,7 @@ function initAnalyser(){
     var sliceWidth = canvas.width / bufferLength;
     
     canvasCtx.fillStyle = "rgb(0,0,0)";
-    canvasCtx.lineWidth = 1.5;
+    canvasCtx.lineWidth = 2;
     canvasCtx.strokeStyle = "rgb(0,255,0)";
     var draw = function(){
         requestAnimationFrame(draw);
@@ -81,7 +81,7 @@ function initAnalyser(){
         var x = 0;
         var y = (dataArray[0]/128) * (canvas.height/2);
         canvasCtx.moveTo(x, y);
-        
+        //draw wave
         for( i = 1 ; i < bufferLength ; i++){
             x += sliceWidth;
             y = (dataArray[i]/128) * (canvas.height/2);
@@ -135,6 +135,50 @@ var release = 0.3; //seconds
 
 //https://www.keithmcmillen.com/blog/making-music-in-the-browser-web-audio-midi-envelope-generator/
 
+
+// SYNTH INPUT
+//SYNTH DOWN
+function synthDown(freq){
+    var startTime = audioCtx.currentTime;
+    var osc = audioCtx.createOscillator();
+    var gainNode = audioCtx.createGain();
+    osc.type = oscWaveType;
+    osc.frequency.value = freq;
+    osc.connect(gainNode);
+    gainNode.connect(masterGain);
+    osc.start(0);
+    oscNodeMap.set(freq, [osc,gainNode]);
+
+    //ADSR Evnelope
+    gainNode.gain.cancelScheduledValues(0);
+    gainNode.gain.setValueAtTime(0, startTime);
+    //Attack
+    gainNode.gain.linearRampToValueAtTime(1, startTime + attack);
+    //Decay to Sustain
+    gainNode.gain.linearRampToValueAtTime(sustain, startTime + attack + decay);
+};
+//SYNTH UP
+function synthUp(freq){
+    var startTime = audioCtx.currentTime;
+    var osc = audioCtx.createOscillator();
+    var gainNode = audioCtx.createGain();
+    osc.type = oscWaveType;
+    osc.frequency.value = freq;
+    osc.connect(gainNode);
+    gainNode.connect(masterGain);
+    osc.start(0);
+    oscNodeMap.set(freq, [osc,gainNode]);
+
+    //ADSR Evnelope
+    gainNode.gain.cancelScheduledValues(0);
+    gainNode.gain.setValueAtTime(0, startTime);
+    //Attack
+    gainNode.gain.linearRampToValueAtTime(1, startTime + attack);
+    //Decay to Sustain
+    gainNode.gain.linearRampToValueAtTime(sustain, startTime + attack + decay);
+};
+
+
 //KEYBOARD INPUT
 var oscNodeMap = new Map();
 
@@ -186,34 +230,25 @@ document.addEventListener("keyup", function(event){
     }
 });
 
-//workaround for individual notes
-//var down = false;
-/*
-document.addEventListener("keydown", function(event){
-    console.log(event.keyCode);
-    if(!down){
-        var freq = keycodemap.get(event.keyCode);
-        console.log(freq);
-        if(freq){
-            down = true;
-            oscillator.frequency.value = freq;
-            toggleMute();
-        }
-        
-    }
-    
-});
+var mouseDown = false;
 
-document.addEventListener("keyup", function(event){
-    console.log(event.keyCode);
-    if(down)
-    {
-        down = false;
-        toggleMute();
-    }
+// KEYBOARD ON-CLICK LISTENERS
+document.getElementById("keyboard").addEventListener("mousedown", function(event){
+    event.preventDefault();
+    console.log(event.target.id);
 });
-
-*/
+document.getElementById("keyboard").addEventListener("mouseover", function(event){
+    event.preventDefault();
+    console.log(event.target.id);
+});
+document.getElementById("keyboard").addEventListener("mouseup", function(event){
+    event.preventDefault();
+    console.log(event.target.id);
+});
+document.getElementById("keyboard").addEventListener("mouseout", function(event){
+    event.preventDefault();
+    console.log("out");
+});
 
 
 // Test volume slider
@@ -251,13 +286,3 @@ document.getElementById("release-slider").addEventListener("input", function(eve
     $("#release-value").text(release);
 });
 
-/*
-$("#test-window").keydown(function(event){
-    event.preventDefault();
-    console.log("down - " + event.keyCode);
-});
-$("#test-window").keyup(function(event){
-    event.preventDefault();
-    console.log("up   - " + event.keyCode);
-});
-*/
