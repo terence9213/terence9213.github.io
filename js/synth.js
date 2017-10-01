@@ -53,6 +53,7 @@ function init(){
         else 
         { console.log("-- notemap null --"); }
         
+        toggleMute();
         console.log("initComplete:" + initComplete);
     });
 }

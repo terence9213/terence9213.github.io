@@ -10,11 +10,33 @@ and open the template in the editor.
 
 ul.keyboard{
     list-style: none;
+    border: 1px solid #000000;
+    padding: 20px;
+    width: max-content;
+    font-size: 0; /* Fix for extra whitespace margin on <li> */
 }
 li.keyboard-key{
     /*https://blog.mozilla.org/webdev/2009/02/20/cross-browser-inline-block/*/ 
     display: -moz-inline-stack; /*workaround for firefox : not gonna fix for IE6/7*/ 
     display: inline-block;
-    height: 100px;
+    border-radius: 0px 0px 5px 5px;
+}
+
+li.white-key{
+    background-color: #ffffff;
+    height: 200px;
+    width: 50px;
+    border-width: 1px 0px 1px 1px;
     border-style: solid;
+}
+.black-key{
+    height: 150px;
+    width: 30px;
+    background-color: #000000;
+    position: relative;
+    left: 35px;
+}
+/* Is there another way to apply border on last element? */
+li.white-key:last-child{
+    border-width: 1px; 
 }
