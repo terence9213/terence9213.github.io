@@ -36,7 +36,7 @@ li.white-key{
     position: relative;
     left: 35px;
 }
-/* Is there another way to apply border on last element? */
+/* Is there another way to apply right border on last element? */
 li.white-key:last-child{
     border-width: 1px; 
 }

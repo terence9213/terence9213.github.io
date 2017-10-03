@@ -189,9 +189,8 @@ var oscNodeMap = new Map();
 document.addEventListener("keydown", function(event){
     //console.log(event.keyCode);
     var freq = keycodemap.get(event.keyCode);
-    synthDown(freq);
+    if(freq){synthDown(freq);};
 });
-
 
 document.addEventListener("keyup", function(event){
     //console.log(event.keyCode);
@@ -202,7 +201,6 @@ document.addEventListener("keyup", function(event){
 
 // MOUSE - KEYBOARD INPUT
 var mouseDown = false;
-
 document.getElementById("keyboard").addEventListener("mousedown", function(event){
     event.preventDefault();
     mouseDown = true;
@@ -237,8 +235,38 @@ document.getElementById("keyboard").addEventListener("mouseout", function(event)
     }
 });
 
+// TOUCH - TOUCH SCREEN INPUT
+document.getElementById("keyboard").addEventListener("touchstart", function(event){
+    event.preventDefault();
+    console.log("start " + event.target.id);
+    if(event.target.id !== "keyboard"){
+        var freq = notemap.get(event.target.id);
+        synthDown(freq);
+    }
+});
+document.getElementById("keyboard").addEventListener("touchend", function(event){
+    event.preventDefault();
+    console.log("end " + event.target.id);
+    if(event.target.id !== "keyboard"){
+        var freq = notemap.get(event.target.id);
+        synthUp(freq);
+    }
+});
+document.getElementById("keyboard").addEventListener("touchmove", function(event){
+    event.preventDefault();
+    console.log("move " + event.target.id);
+});
+document.getElementById("keyboard").addEventListener("touchcancel", function(event){
+    event.preventDefault();
+    console.log("cancel " + event.target.id);
+    if(event.target.id !== "keyboard"){
+        var freq = notemap.get(event.target.id);
+        synthUp(freq);
+    }
+});
 
-// Test volume slider
+
+// Volume slider
 document.getElementById("volume-slider").addEventListener("change", function(event){
     console.log(event.target.value);
     setVolume(event.target.value);
