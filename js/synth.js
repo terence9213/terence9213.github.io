@@ -15,17 +15,44 @@ var AudioContext = window.AudioContext || window.webkitAudioContext;
 var audioCtx = new AudioContext();
 
 // -- Create nodes -- //
- 
-// Create Oscillator and gain node
-//var oscillator = audioCtx.createOscillator();
-var masterGain = audioCtx.createGain();
 
-//create analyser and connect master gain to analyser
+/*  NODES
+ * [[osc][gain]] -> [synthGain] -> [distortion] -> [masterGain] -> [audioCtx Destination]
+ *                                                              -> [analyser]
+ */
+ 
+//MASTER GAIN
+var masterGain = audioCtx.createGain();
+masterGain.connect(audioCtx.destination);
+
+//ANALYSER
 var analyser = audioCtx.createAnalyser();
 masterGain.connect(analyser);
 
-var initComplete = false;
-var mute = true;
+//DISTORTION
+var distortion = audioCtx.createWaveShaper();
+distortion.connect(masterGain);
+
+//SYNTH GAIN
+var synthGain = audioCtx.createGain();
+synthGain.connect(distortion);
+
+//ADSR VALUES
+var attack = 0.2; //seconds
+var decay = 0.3; //seconds
+var sustain = 0.8; //amplitude
+var release = 0.3; //seconds
+
+//https://www.keithmcmillen.com/blog/making-music-in-the-browser-web-audio-midi-envelope-generator/
+
+//WAVEFROM
+var oscWaveType = "sine"; //default
+
+//DISTORTION
+var distortionLvl = 0;
+var distortionOn = true;
+
+var mute = false;
 
 var notemap = null;
 var keycodemap = null;
@@ -44,18 +71,31 @@ function init(){
     console.log("INIT ---");
     masterGain.gain.value = 0.5;
     
-    // Retrieve Notemap
-    $.getJSON("keycodenotemap.json", function(data){
-        parseNotemap(data);
-        
-        if(notemap && keycodemap)   
-        { initComplete = true; initAnalyser();}
-        else 
-        { console.log("-- notemap null --"); }
-        
-        toggleMute();
-        console.log("initComplete:" + initComplete);
-    });
+    initUIValues();
+    
+    initAnalyser();
+    initMaps();
+    
+    setDistortionCurve();
+    
+    console.log("initComplete");
+    
+}
+
+//INIT UI VALUES
+function initUIValues(){
+    document.getElementById("volume-slider").value = 0.5;
+    document.getElementById("attack-slider").value = attack;
+    document.getElementById("decay-slider").value = decay;
+    document.getElementById("sustain-slider").value = sustain;
+    document.getElementById("release-slider").value = release;
+    document.getElementById("distortion-lvl-slider").value = distortionLvl;
+    $("#attack-value").text(attack);
+    $("#decay-value").text(decay);
+    $("#sustain-value").text(sustain);
+    $("#release-value").text(release);
+    $("#distortion-lvl-value").text(distortionLvl);
+    
 }
 
 // INIT ANALYSER OSCILLOSCOPE
@@ -99,16 +139,72 @@ function initAnalyser(){
     
 }
 
-function parseNotemap(JSONData){
-    console.log(JSONData);
-    notemap = new Map();
-    keycodemap = new Map();
-    $.each(JSONData, function(i,obj){
-        notemap.set(obj.note, obj.frequency);
-        keycodemap.set(obj.keycode, obj.frequency);
-    });
+// INIT NOTE-FREQ & KEYCODE_FREQ MAP
+function initMaps(){
+    var noteFreqArray = 
+        [
+            ["C4", 261.6255653005985],
+            ["C#4", 277.182630976872],
+            ["D4", 293.66476791740746],
+            ["D#4", 311.1269837220808],
+            ["E4", 329.62755691286986],
+            ["F4", 349.2282314330038],
+            ["F#4", 369.99442271163434],
+            ["G4", 391.99543598174927],
+            ["G#4", 415.3046975799451],
+            ["A4", 440],
+            ["A#4", 466.1637615180899],
+            ["B4", 493.8833012561241],
+            ["C5", 523.2511306011974],//
+            ["C#5", 554.3652619537443],
+            ["D5", 587.3295358348153],
+            ["D#5", 622.253967444162],
+            ["E5", 659.2551138257401],
+            ["F5", 698.456462866008]
+        ];
+    var keycodeFreqArray =
+        [
+            [65, 261.6255653005985],
+            [87, 277.182630976872],
+            [83, 293.66476791740746],
+            [69, 311.1269837220808],
+            [68, 329.62755691286986],
+            [70, 349.2282314330038],
+            [84, 369.99442271163434],
+            [71, 391.99543598174927],
+            [89, 415.3046975799451],
+            [72, 440],
+            [85, 466.1637615180899],
+            [74, 493.8833012561241],
+            [75, 523.2511306011974],//
+            [79, 554.3652619537443],
+            [76, 587.3295358348153],
+            [80, 622.253967444162],
+            [186, 659.2551138257401],
+            [222, 698.456462866008]
+        ];
+    notemap = new Map(noteFreqArray);
+    keycodemap = new Map(keycodeFreqArray);
+    
 }
 
+// INIT DISTORTION
+//https://developer.mozilla.org/en-US/docs/Web/API/WaveShaperNode
+function setDistortionCurve(){
+    var curve = new Float32Array(44100);
+    var n_samples = 44100;
+    for (i=0 ; i < n_samples; ++i ) {
+        x = i * 2 / n_samples - 1;
+        curve[i] = (Math.PI + distortionLvl) * x / (Math.PI + distortionLvl * Math.abs(x));
+        //curve[i] = x*x*x;
+        //curve[i] = 1 * x * x * x + 1 * x * x ;
+        //curve[i] = x * x ;
+    }
+    distortion.curve = curve;
+}
+
+
+// UI FUNCTIONS
 function setVolume(vol){
     masterGain.gain.value = vol;
 }
@@ -122,20 +218,20 @@ function toggleMute(){
         masterGain.disconnect(audioCtx.destination);
         mute = true;
     }
-    
 }
 
-//WAVEFROM
-var oscWaveType = "sine"; //default
-
-//ADSR 
-var attack = 0.2; //seconds
-var decay = 0.3; //seconds
-var sustain = 0.8; //amplitude
-var release = 0.3; //seconds
-
-//https://www.keithmcmillen.com/blog/making-music-in-the-browser-web-audio-midi-envelope-generator/
-
+function toggleDistortion(){
+    if(distortionOn){
+        distortion.disconnect(masterGain);
+        synthGain.connect(masterGain);
+        distortionOn = false;
+    }
+    else{
+        distortion.connect(masterGain);
+        synthGain.disconnect(masterGain);
+        distortionOn = true;
+    }
+}
 
 // SYNTH INPUT
 //SYNTH DOWN
@@ -147,7 +243,7 @@ function synthDown(freq){
         osc.type = oscWaveType;
         osc.frequency.value = freq;
         osc.connect(gainNode);
-        gainNode.connect(masterGain);
+        gainNode.connect(synthGain);
         osc.start(0);
         oscNodeMap.set(freq, [osc,gainNode]);
 
@@ -268,15 +364,12 @@ document.getElementById("keyboard").addEventListener("touchcancel", function(eve
 
 // Volume slider
 document.getElementById("volume-slider").addEventListener("change", function(event){
-    console.log(event.target.value);
     setVolume(event.target.value);
 });
 
 // Oscillator wave type picker
 document.getElementById("osc-wave-type-picker").addEventListener("change", function(){
-    //Take note of scroll-blocking violation! Fix later!
     oscWaveType = document.querySelector("input[name='osc-wave-type']:checked").value;
-    console.log(oscWaveType);
 });
 
 //ADSR SLIDERS
@@ -301,3 +394,9 @@ document.getElementById("release-slider").addEventListener("input", function(eve
     $("#release-value").text(release);
 });
 
+// DISTORTION SLIDER
+document.getElementById("distortion-lvl-slider").addEventListener("input", function(event){
+    distortionLvl = parseFloat(event.target.value);
+    setDistortionCurve();
+    $("#distortion-lvl-value").text(distortionLvl);
+});
