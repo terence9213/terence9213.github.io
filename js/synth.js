@@ -17,8 +17,8 @@ var audioCtx = new AudioContext();
 // -- Create nodes -- //
 
 /*  NODES
- * [[osc][gain]] -> [synthGain] -> [distortion] -> [masterGain] -> [compressor] -> [audioCtx Destination]
- *                                                                              -> [analyser]
+ * [[osc][gain][distortion]] -> [synthGain] -> [masterGain] -> [compressor] -> [audioCtx Destination]
+ *                                                                          -> [analyser]
  */
  
 //COMPRESSOR
@@ -41,12 +41,13 @@ var masterGain = audioCtx.createGain();
 masterGain.connect(compressor);
 
 //DISTORTION
-var distortion = audioCtx.createWaveShaper();
-distortion.connect(masterGain);
+//var distortion = audioCtx.createWaveShaper();
+//distortion.connect(masterGain);
 
 //SYNTH GAIN
 var synthGain = audioCtx.createGain();
-synthGain.connect(distortion);
+synthGain.connect(masterGain);
+synthGain.gain.value = 0.5;
 
 //ADSR VALUES
 var attack = 0.2; //seconds
@@ -61,7 +62,9 @@ var oscWaveType = "sine"; //default
 
 //DISTORTION
 var distortionLvl = 0;
-var distortionOn = true;
+var distortionOn = false;
+var distortionType = 0;
+var distortionCurve = null;
 
 var mute = false;
 
@@ -202,16 +205,32 @@ function initMaps(){
 // INIT DISTORTION
 //https://developer.mozilla.org/en-US/docs/Web/API/WaveShaperNode
 function setDistortionCurve(){
-    var curve = new Float32Array(44100);
+    console.log("building distortion curve");
+    
+    distortionCurve = new Float32Array(44100);
     var n_samples = 44100;
-    for (i=0 ; i < n_samples; ++i ) {
-        x = i * 2 / n_samples - 1;
-        //curve[i] = (Math.PI + distortionLvl) * x / (Math.PI + distortionLvl * Math.abs(x));
-        curve[i] = x*x*x;
-        //curve[i] = 1 * x * x * x + 1 * x * x ;
-        //curve[i] = x * x ;
+    
+    switch(distortionType){
+        case 0:
+            for (i=0 ; i < n_samples; ++i ){
+                x = i * 2 / n_samples - 1;
+                distortionCurve[i] = (Math.PI + distortionLvl) * x / (Math.PI + distortionLvl * Math.abs(x));
+            }
+            break;
+        case 1:
+            for (i=0 ; i < n_samples; ++i ){
+                x = i * 2 / n_samples - 1;
+                distortionCurve[i] = Math.abs(Math.pow(x,distortionLvl));
+            }
+            break;
+        case 2:
+            for (i=0 ; i < n_samples; ++i ){
+                x = i * 2 / n_samples - 1;
+                distortionCurve[i] = Math.sin(x * distortionLvl);
+            }
+            break;
     }
-    distortion.curve = curve;
+    
 }
 
 
@@ -233,13 +252,11 @@ function toggleMute(){
 
 function toggleDistortion(){
     if(distortionOn){
-        distortion.disconnect(masterGain);
-        synthGain.connect(masterGain);
+        document.getElementById("distortion-settings").style.display = "none";
         distortionOn = false;
     }
     else{
-        distortion.connect(masterGain);
-        synthGain.disconnect(masterGain);
+        document.getElementById("distortion-settings").style.display = "block";
         distortionOn = true;
     }
 }
@@ -255,8 +272,21 @@ function synthDown(freq){
         osc.frequency.value = freq;
         osc.connect(gainNode);
         gainNode.connect(synthGain);
+        if(distortionOn){
+            var distortionNode = audioCtx.createWaveShaper();
+            distortionNode.curve = distortionCurve;
+            distortionNode.oversample = "none";
+            osc.connect(gainNode);
+            gainNode.connect(distortionNode);
+            distortionNode.connect(synthGain);
+            oscNodeMap.set(freq, [osc,gainNode,distortionNode]);
+        }else{
+            osc.connect(gainNode);
+            gainNode.connect(synthGain);
+            oscNodeMap.set(freq, [osc,gainNode]);
+        }
         osc.start(0);
-        oscNodeMap.set(freq, [osc,gainNode]);
+        
 
         //ADSR Evnelope
         gainNode.gain.cancelScheduledValues(0);
@@ -270,10 +300,10 @@ function synthDown(freq){
 };
 //SYNTH UP
 function synthUp(freq){
-    var oscGainPair = oscNodeMap.get(freq);
-    if(oscGainPair){
-        var osc = oscGainPair[0];
-        var gainNode = oscGainPair[1];
+    var nodeArray = oscNodeMap.get(freq);
+    if(nodeArray){
+        var osc = nodeArray[0];
+        var gainNode = nodeArray[1];
         var startTime = audioCtx.currentTime;
         //ADSR Evelope
         gainNode.gain.cancelScheduledValues(0);
@@ -405,9 +435,16 @@ document.getElementById("release-slider").addEventListener("input", function(eve
     $("#release-value").text(release);
 });
 
-// DISTORTION SLIDER
+//DISTORTION SLIDER
+//Distortion lvl
 document.getElementById("distortion-lvl-slider").addEventListener("input", function(event){
     distortionLvl = parseFloat(event.target.value);
     setDistortionCurve();
     $("#distortion-lvl-value").text(distortionLvl);
+});
+//Distortion type
+document.getElementById("distortion-type-picker").addEventListener("change", function(){
+    distortionType = parseInt(document.querySelector("input[name='distortion-type']:checked").value,10);
+    setDistortionCurve();
+    console.log(distortionType);
 });

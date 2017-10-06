@@ -59,13 +59,24 @@ and open the template in the editor.
             </div>
         </div>
         <!-- DISTORTION SLIDERS -->
-        <div>
-            <div>
-                <span>Distortion</span>
-                <input id="distortion-lvl-slider" type="range" min="0" max="100" step="1">
-                <span id="distortion-lvl-value"></span>
-            </div>
+        <div style="padding: 5px">
             <button onclick="toggleDistortion()">Toggle DISTORTION</button>
+            <div id="distortion-settings" style="display: none">
+                <div style="padding: 5px; background: #dddddd">
+                    <span>Distortion Type: </span>
+                    <div id="distortion-type-picker">
+                        <input type="radio" name="distortion-type" value="0" checked="checked">0
+                        <input type="radio" name="distortion-type" value="1">1
+                        <input type="radio" name="distortion-type" value="2">2
+                    </div>
+                </div>
+                <div>
+                    <span>Distortion</span>
+                    <input id="distortion-lvl-slider" type="range" min="0" max="100" step="1">
+                    <span id="distortion-lvl-value"></span>
+                </div>
+            </div>
+            
         </div>
             
         <div>
