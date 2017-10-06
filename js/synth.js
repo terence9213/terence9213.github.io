@@ -17,17 +17,28 @@ var audioCtx = new AudioContext();
 // -- Create nodes -- //
 
 /*  NODES
- * [[osc][gain]] -> [synthGain] -> [distortion] -> [masterGain] -> [audioCtx Destination]
- *                                                              -> [analyser]
+ * [[osc][gain]] -> [synthGain] -> [distortion] -> [masterGain] -> [compressor] -> [audioCtx Destination]
+ *                                                                              -> [analyser]
  */
  
-//MASTER GAIN
-var masterGain = audioCtx.createGain();
-masterGain.connect(audioCtx.destination);
+//COMPRESSOR
+var compressor = audioCtx.createDynamicsCompressor();
+compressor.connect(audioCtx.destination);
+compressor.threshold.value = -50;
+compressor.knee.value = 40;
+compressor.ratio.value = 18;
+compressor.attack.value = 0.003;
+compressor.release.value = 0.25;
+//compressor.reduction (get current reduction)
+//https://developer.mozilla.org/en-US/docs/Web/API/DynamicsCompressorNode
 
 //ANALYSER
 var analyser = audioCtx.createAnalyser();
-masterGain.connect(analyser);
+compressor.connect(analyser);
+
+//MASTER GAIN
+var masterGain = audioCtx.createGain();
+masterGain.connect(compressor);
 
 //DISTORTION
 var distortion = audioCtx.createWaveShaper();
@@ -195,8 +206,8 @@ function setDistortionCurve(){
     var n_samples = 44100;
     for (i=0 ; i < n_samples; ++i ) {
         x = i * 2 / n_samples - 1;
-        curve[i] = (Math.PI + distortionLvl) * x / (Math.PI + distortionLvl * Math.abs(x));
-        //curve[i] = x*x*x;
+        //curve[i] = (Math.PI + distortionLvl) * x / (Math.PI + distortionLvl * Math.abs(x));
+        curve[i] = x*x*x;
         //curve[i] = 1 * x * x * x + 1 * x * x ;
         //curve[i] = x * x ;
     }
