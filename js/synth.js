@@ -144,7 +144,7 @@ function initAnalyser(){
             
         }
         //last point
-        canvasCtx.lineTo(canvas.width, canvas.height);
+        //canvasCtx.lineTo(canvas.width, canvas.height);
         canvasCtx.stroke();
         
     };

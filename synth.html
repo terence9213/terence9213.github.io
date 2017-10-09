@@ -12,110 +12,121 @@ and open the template in the editor.
         
         <!-- STYLE SHEETS -->
         <link rel="stylesheet" href="css\common.css">
-        <link rel="stylesheet" href="css\keyboard.css">
+        <link rel="stylesheet" href="css\synth.css">
         <link rel="stylesheet" href="css\bootstrap\bootstrap.css">
     </head>
     
     <body>
-        <div>SYNTH TEST</div>
-        <div style="padding: 5px">
-            <canvas id="oscilloscope" height="100" width="800"></canvas>
-        </div>
-        <div id="test-window" style=" padding: 5px; background: #999999;">
-            <span>Master Volume</span>
-            <input id="volume-slider" type="range" min="0" max="1" step="0.05">
-            <button onclick="toggleMute()">Toggle MUTE</button>
-        </div>
-        <div style="padding: 5px; background: #dddddd">
-            <span>Wave: </span>
-            <div id="osc-wave-type-picker">
-                <input type="radio" name="osc-wave-type" value="sine" checked="checked">Sine
-                <input type="radio" name="osc-wave-type" value="square">Square
-                <input type="radio" name="osc-wave-type" value="sawtooth">Sawtooth
-                <input type="radio" name="osc-wave-type" value="triangle">Triangle
-            </div>
-        </div>
-        <!-- ADSR SLIDERS -->
-        <div>
-            <div>
-                <span>Attack</span>
-                <input id="attack-slider" type="range" min="0" max="1" step="0.05">
-                <span id="attack-value"></span>
-            </div>
-            <div>
-                <span>Decay</span>
-                <input id="decay-slider" type="range" min="0" max="1" step="0.05">
-                <span id="decay-value"></span>
-            </div>
-            <div>
-                <span>Sustain</span>
-                <input id="sustain-slider" type="range" min="0" max="1" step="0.05">
-                <span id="sustain-value"></span>
-            </div>
-            <div>
-                <span>Release</span>
-                <input id="release-slider" type="range" min="0" max="1" step="0.05">
-                <span id="release-value"></span>
-            </div>
-        </div>
-        <!-- DISTORTION SLIDERS -->
-        <div style="padding: 5px">
-            <button onclick="toggleDistortion()">Toggle DISTORTION</button>
-            <div id="distortion-settings" style="display: none">
-                <div style="padding: 5px; background: #dddddd">
-                    <span>Distortion Type: </span>
-                    <div id="distortion-type-picker">
-                        <input type="radio" name="distortion-type" value="0" checked="checked">0
-                        <input type="radio" name="distortion-type" value="1">1
-                        <input type="radio" name="distortion-type" value="2">2
+        <div class="main-body">
+            <div class="container synth-container">
+                <h5>SYNTH V1.01</h5>
+                <!--OSCILLIOSCOPE-->
+                <div class="oscilloscope-holder">
+                    <canvas id="oscilloscope"></canvas>
+                </div>
+                
+                <!--UI-->
+                <div class="synth-ui">
+                    <div>
+                        <span>Master Volume</span>
+                        <input id="volume-slider" type="range" min="0" max="1" step="0.05">
+                        <button onclick="toggleMute()">Toggle MUTE</button>
                     </div>
+                    <div>
+                        <span>Wave: </span>
+                        <div id="osc-wave-type-picker">
+                            <input type="radio" name="osc-wave-type" value="sine" checked="checked">Sine
+                            <input type="radio" name="osc-wave-type" value="square">Square
+                            <input type="radio" name="osc-wave-type" value="sawtooth">Sawtooth
+                            <input type="radio" name="osc-wave-type" value="triangle">Triangle
+                        </div>
+                    </div>
+                    <!-- ADSR SLIDERS -->
+                    <div>
+                        <div>
+                            <span>Attack</span>
+                            <input id="attack-slider" type="range" min="0" max="1" step="0.05">
+                            <span id="attack-value"></span>
+                        </div>
+                        <div>
+                            <span>Decay</span>
+                            <input id="decay-slider" type="range" min="0" max="1" step="0.05">
+                            <span id="decay-value"></span>
+                        </div>
+                        <div>
+                            <span>Sustain</span>
+                            <input id="sustain-slider" type="range" min="0" max="1" step="0.05">
+                            <span id="sustain-value"></span>
+                        </div>
+                        <div>
+                            <span>Release</span>
+                            <input id="release-slider" type="range" min="0" max="1" step="0.05">
+                            <span id="release-value"></span>
+                        </div>
+                    </div>
+                    <!-- DISTORTION SLIDERS -->
+                    <div>
+                        <button onclick="toggleDistortion()">Toggle DISTORTION</button>
+                        <div id="distortion-settings" style="display: none">
+                            <div style="padding: 5px; background: #dddddd">
+                                <span>Distortion Type: </span>
+                                <div id="distortion-type-picker">
+                                    <input type="radio" name="distortion-type" value="0" checked="checked">0
+                                    <input type="radio" name="distortion-type" value="1">1
+                                    <input type="radio" name="distortion-type" value="2">2
+                                </div>
+                            </div>
+                            <div>
+                                <span>Distortion</span>
+                                <input id="distortion-lvl-slider" type="range" min="0" max="100" step="1">
+                                <span id="distortion-lvl-value"></span>
+                            </div>
+                        </div>
+
+                    </div>
+
                 </div>
+                
+                
                 <div>
-                    <span>Distortion</span>
-                    <input id="distortion-lvl-slider" type="range" min="0" max="100" step="1">
-                    <span id="distortion-lvl-value"></span>
+                    <ul id="keyboard" class="keyboard">
+                        <li id="C4" class="keyboard-key white-key">
+                            <div id="C#4" class="black-key"></div>
+                        </li>
+                        <li id="D4" class="keyboard-key white-key">
+                            <div id="D#4" class="keyboard-key black-key"></div>
+                        </li>
+                        <li id="E4" class="keyboard-key white-key"></li>
+                        <li id="F4" class="keyboard-key white-key">
+                            <div id="F#4" class="keyboard-key black-key"></div>
+                        </li>
+                        <li id="G4" class="keyboard-key white-key">
+                            <div id="G#4" class="keyboard-key black-key"></div>
+                        </li>
+                        <li id="A4" class="keyboard-key white-key">
+                            <div id="A#4" class="keyboard-key black-key"></div>
+                        </li>
+                        <li id="B4" class="keyboard-key white-key"></li>
+                        <li id="C5" class="keyboard-key white-key"></li>
+                    </ul>
+
+                    <!--<ul id="keyboard" class="keyboard">
+                        <li id="C4" class="keyboard-key white-key"></li>
+                        <li id="C#4" class="keyboard-key black-key"></li>
+                        <li id="D4" class="keyboard-key white-key"></li>
+                        <li id="D#4" class="keyboard-key black-key"></li>
+                        <li id="E4" class="keyboard-key white-key"></li>
+                        <li id="F4" class="keyboard-key white-key"></li>
+                        <li id="F#4" class="keyboard-key black-key"></li>
+                        <li id="G4" class="keyboard-key white-key"></li>
+                        <li id="G#4" class="keyboard-key black-key"></li>
+                        <li id="A4" class="keyboard-key white-key"></li>
+                        <li id="A#4" class="keyboard-key black-key"></li>
+                        <li id="B4" class="keyboard-key white-key"></li>
+                        <li id="C5" class="keyboard-key white-key"></li>
+                    </ul>-->
                 </div>
             </div>
-            
-        </div>
-            
-        <div>
-            <ul id="keyboard" class="keyboard">
-                <li id="C4" class="keyboard-key white-key">
-                    <div id="C#4" class="black-key"></div>
-                </li>
-                <li id="D4" class="keyboard-key white-key">
-                    <div id="D#4" class="keyboard-key black-key"></div>
-                </li>
-                <li id="E4" class="keyboard-key white-key"></li>
-                <li id="F4" class="keyboard-key white-key">
-                    <div id="F#4" class="keyboard-key black-key"></div>
-                </li>
-                <li id="G4" class="keyboard-key white-key">
-                    <div id="G#4" class="keyboard-key black-key"></div>
-                </li>
-                <li id="A4" class="keyboard-key white-key">
-                    <div id="A#4" class="keyboard-key black-key"></div>
-                </li>
-                <li id="B4" class="keyboard-key white-key"></li>
-                <li id="C5" class="keyboard-key white-key"></li>
-            </ul>
-            
-            <!--<ul id="keyboard" class="keyboard">
-                <li id="C4" class="keyboard-key white-key"></li>
-                <li id="C#4" class="keyboard-key black-key"></li>
-                <li id="D4" class="keyboard-key white-key"></li>
-                <li id="D#4" class="keyboard-key black-key"></li>
-                <li id="E4" class="keyboard-key white-key"></li>
-                <li id="F4" class="keyboard-key white-key"></li>
-                <li id="F#4" class="keyboard-key black-key"></li>
-                <li id="G4" class="keyboard-key white-key"></li>
-                <li id="G#4" class="keyboard-key black-key"></li>
-                <li id="A4" class="keyboard-key white-key"></li>
-                <li id="A#4" class="keyboard-key black-key"></li>
-                <li id="B4" class="keyboard-key white-key"></li>
-                <li id="C5" class="keyboard-key white-key"></li>
-            </ul>-->
         </div>
         
         <!-- JAVA SCRIPT -->
