@@ -123,8 +123,6 @@ function initAnalyser(){
     canvasCtx.lineWidth = 2;
     canvasCtx.strokeStyle = "rgb(0,255,0)";
     var draw = function(){
-        requestAnimationFrame(draw);
-        
         //Get data from analyser
         analyser.getByteTimeDomainData(dataArray);
         
@@ -146,7 +144,7 @@ function initAnalyser(){
         //last point
         //canvasCtx.lineTo(canvas.width, canvas.height);
         canvasCtx.stroke();
-        
+        requestAnimationFrame(draw);
     };
     draw();
     
