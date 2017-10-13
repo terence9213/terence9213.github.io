@@ -23,8 +23,10 @@ var avatarMs = 8; // movement speed in x/y
 var projectileArray = [];
 var projectileRadius = 5;
 var projectileClr = "red";
-var projectileDmg = 10;
-var projectiletMs = 20;
+var projectileDmg = 50;
+var projectiletMs = 10;
+var lastProjectile = Date.now();
+var projectileRate = 50; // in ms
 //PROJECTILE OBJ
 function Projectile(){
     this.x = avatarX + avatarWidth/2;
@@ -33,10 +35,12 @@ function Projectile(){
 
 //ENEMY
 var enemyArray = [];
+var enemyDeathArray = [];
 var lastSpawnTime = Date.now();
-var spawnInterval = 2000;
+var spawnInterval = 2000; //in ms
 var maxHealth = 1000;
-var minHealth = 100;
+var minHealth = 500;
+var enemyColour = "rgba(200, 200, 50, 1)";
 //ENEMY OBJ
 function Enemy(x, y, width, height, colour, health, ms){
     this.x = x;
@@ -46,6 +50,7 @@ function Enemy(x, y, width, height, colour, health, ms){
     this.colour = colour;
     this.health = health;
     this.ms = ms;
+    this.rgba = [200, 200, 50, 1];
 }
 
 //UI EVENTS
@@ -62,6 +67,7 @@ function draw(){
     drawAvatar();
     drawProjectiles();
     drawEnemys();
+    animateEnemyDeath();
     drawScore();
     
     requestAnimationFrame(draw);
@@ -88,8 +94,9 @@ function drawAvatar(){
 }
 
 function drawProjectiles(){
-    if(fire){
+    if(fire && Date.now() >= lastProjectile + projectileRate){
         projectileArray.push(new Projectile());
+        lastProjectile = Date.now();
     }
     
     for(var i = 0 ; i < projectileArray.length ; i++){
@@ -117,7 +124,7 @@ function drawEnemys(){ //Yes I know
         var health = Math.floor(Math.random() * (maxHealth - minHealth) + minHealth);
         var width = health / 10;
         var height = Math.floor(width * 0.8);
-        enemyArray.push(new Enemy(x, 0, width, height, "yellow", health, 5));
+        enemyArray.push(new Enemy(x, 0, width, height, enemyColour, health, 5));
         lastSpawnTime = Date.now();
     }
     
@@ -135,7 +142,7 @@ function drawEnemys(){ //Yes I know
                     e.health -= projectileDmg;
                     projectileArray.splice(j,1);
                     if(e.health <= 0){
-                        enemyArray.splice(i,1);
+                        enemyDeathArray.push(enemyArray.splice(i,1)[0]);
                         score += 1;
                     }
                 }
@@ -151,6 +158,26 @@ function drawEnemys(){ //Yes I know
         ctx.closePath();
     }
     
+}
+
+function animateEnemyDeath(){
+    if(enemyDeathArray.length > 0){
+        for(var i = 0 ; i < enemyDeathArray.length ; i++){
+            var e = enemyDeathArray[i];
+            //var a = e.rgba[3];
+            if(e.rgba[3] > 0){
+                e.rgba[3] -= 0.02;
+            }
+            else if(e.rgba[3] <= 0){
+                enemyDeathArray.splice(i,1);
+            }
+            ctx.beginPath();
+            ctx.rect(e.x, e.y, e.width, e.height);
+            ctx.fillStyle = "rgba(" + e.rgba[0] + "," + e.rgba[1] + "," + e.rgba[2] + "," + e.rgba[3] + ")";
+            ctx.fill();
+            ctx.closePath();
+        }
+    }
 }
 
 function drawScore(){
