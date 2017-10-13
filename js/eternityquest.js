@@ -13,11 +13,13 @@ canvas.height = 800;
 var score = 0;
 
 //AVATAR 
-var avatarX = canvas.width/2;
-var avatarY = canvas.height/2;
-var avatarWidth = 20;
-var avatarHeight = 20;
-var avatarMs = 8; // movement speed in x/y
+var avatarSprite = new Image();
+avatarSprite.src = "img/eternityquest/avatar.png";
+var avatarWidth = 50;
+var avatarHeight = 50;
+var avatarX = (canvas.width/2) - (avatarWidth/2);
+var avatarY = canvas.height - avatarHeight;
+var avatarMs = 8; // movement speed in px relative to x/y
 
 //PROJECTILE
 var projectileArray = [];
@@ -34,6 +36,10 @@ function Projectile(){
 }
 
 //ENEMY
+var enemySprite = new Image();
+enemySprite.src = "img/eternityquest/enemy.png";
+var enemyWidth = 50;
+var enemyHeight = 50;
 var enemyArray = [];
 var enemyDeathArray = [];
 var lastSpawnTime = Date.now();
@@ -85,12 +91,15 @@ function drawAvatar(){
     if(down){ avatarY += avatarMs; }
     if(left){ avatarX -= avatarMs; }
     if(right){ avatarX += avatarMs; }
-    
+    /*
     ctx.beginPath();
     ctx.rect(avatarX, avatarY, avatarWidth, avatarHeight);
     ctx.fillStyle = "blue";
     ctx.fill();
     ctx.closePath();
+    */
+    ctx.drawImage(avatarSprite, avatarX, avatarY, avatarWidth, avatarHeight);
+    
 }
 
 function drawProjectiles(){
@@ -120,11 +129,11 @@ function drawEnemys(){ //Yes I know
     //Generate random enemy randomly
     if(Date.now() >= lastSpawnTime + spawnInterval){
         //SPAWN
-        var x = Math.floor(Math.random() *canvas.width);
+        var x = Math.floor(Math.random() *(canvas.width - enemyWidth));
         var health = Math.floor(Math.random() * (maxHealth - minHealth) + minHealth);
         var width = health / 10;
         var height = Math.floor(width * 0.8);
-        enemyArray.push(new Enemy(x, 0, width, height, enemyColour, health, 5));
+        enemyArray.push(new Enemy(x, 0, enemyWidth, enemyHeight, enemyColour, 500, 5));
         lastSpawnTime = Date.now();
     }
     
@@ -151,11 +160,14 @@ function drawEnemys(){ //Yes I know
         //POSITIONING
         e.y += e.ms;
         //RENDER
+        ctx.drawImage(enemySprite, e.x, e.y, e.width, e.height);
+        /*
         ctx.beginPath();
         ctx.rect(e.x, e.y, e.width, e.height);
         ctx.fillStyle = e.colour;
         ctx.fill();
         ctx.closePath();
+        */
     }
     
 }
@@ -164,18 +176,24 @@ function animateEnemyDeath(){
     if(enemyDeathArray.length > 0){
         for(var i = 0 ; i < enemyDeathArray.length ; i++){
             var e = enemyDeathArray[i];
-            //var a = e.rgba[3];
             if(e.rgba[3] > 0){
                 e.rgba[3] -= 0.02;
             }
             else if(e.rgba[3] <= 0){
                 enemyDeathArray.splice(i,1);
             }
+            ctx.globalAlpha = e.rgba[3];
+            if(e.rgba[3] <= 0){ ctx.globalAlpha = 0; }
+            console.log(ctx.globalAlpha);
+            ctx.drawImage(enemySprite, e.x, e.y, e.width, e.height);
+            ctx.globalAlpha = 1;
+            /*
             ctx.beginPath();
             ctx.rect(e.x, e.y, e.width, e.height);
             ctx.fillStyle = "rgba(" + e.rgba[0] + "," + e.rgba[1] + "," + e.rgba[2] + "," + e.rgba[3] + ")";
             ctx.fill();
             ctx.closePath();
+            */
         }
     }
 }
