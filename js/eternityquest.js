@@ -10,25 +10,36 @@ var ctx = canvas.getContext("2d");
 canvas.width = 600;
 canvas.height = 800;
 
+var totalImgs = 2;  
+var loadedImgs = 0; 
+var resourcesLoaded = false;
+var gameReady = false;
+
+var loadingStartTime;
+var loadingMsg = "* * * * *";
+var loadingMsgArray = ["* * * * *", "Prismatic beams aligning", "Calibrating void lenses", "Prismatic core online"];
+var currentMsg = 0;
+//Phase crystals charged
+//Peradak kural
+
 var score = 0;
 
 //AVATAR 
-var avatarSprite = new Image();
-avatarSprite.src = "img/eternityquest/avatar.png";
-var avatarWidth = 50;
-var avatarHeight = 50;
-var avatarX = (canvas.width/2) - (avatarWidth/2);
-var avatarY = canvas.height - avatarHeight;
-var avatarMs = 8; // movement speed in px relative to x/y
+var avatarSprite;
+var avatarWidth;
+var avatarHeight;
+var avatarX;
+var avatarY;
+var avatarMs; // movement speed in px relative to x/y
 
 //PROJECTILE
-var projectileArray = [];
-var projectileRadius = 5;
-var projectileClr = "red";
-var projectileDmg = 50;
-var projectiletMs = 10;
-var lastProjectile = Date.now();
-var projectileRate = 50; // in ms
+var projectileArray;
+var projectileRadius;
+var projectileClr;
+var projectileDmg;
+var projectiletMs;
+var lastProjectile;
+var projectileRate; // in ms
 //PROJECTILE OBJ
 function Projectile(){
     this.x = avatarX + avatarWidth/2;
@@ -36,27 +47,24 @@ function Projectile(){
 }
 
 //ENEMY
-var enemySprite = new Image();
-enemySprite.src = "img/eternityquest/enemy.png";
-var enemyWidth = 50;
-var enemyHeight = 50;
-var enemyArray = [];
-var enemyDeathArray = [];
-var lastSpawnTime = Date.now();
-var spawnInterval = 2000; //in ms
-var maxHealth = 1000;
-var minHealth = 500;
-var enemyColour = "rgba(200, 200, 50, 1)";
+var enemySprite;
+var enemyWidth;
+var enemyHeight;
+var enemyHealth;
+var enemyArray;
+var enemyDeathArray;
+var lastSpawnTime;
+var spawnInterval; //in ms
+
 //ENEMY OBJ
-function Enemy(x, y, width, height, colour, health, ms){
+function Enemy(x, y, width, height, health, ms){
     this.x = x;
     this.y = y;
     this.width = width;
     this.height = height;
-    this.colour = colour;
+    this.a = 1;
     this.health = health;
     this.ms = ms;
-    this.rgba = [200, 200, 50, 1];
 }
 
 //UI EVENTS
@@ -66,17 +74,98 @@ var left = false;
 var right = false;
 var fire = false;
 
-draw();
+init();
+// -- INIT -- //
+function init(){
+    loadingStartTime = Date.now();
+    //INIT LOADING GRAPHICS
+    draw();
+    
+    //INIT IMAGE RESOURCES
+    avatarSprite = new Image();
+    enemySprite = new Image();
+    var imgArray = [avatarSprite, enemySprite];
+    for(var i = 0 ; i < imgArray.length ; i++){
+        imgArray[i].onload = function(){
+            loadedImgs++;
+            if(loadedImgs === totalImgs){ resourcesLoaded = true; }
+        };
+    }
+    avatarSprite.src = "img/eternityquest/avatar.png";
+    enemySprite.src = "img/eternityquest/enemy.png";
+    
+    //INIT VARS
+    resetValues();
+    
+    
+    //FIRST DRAW
+    //draw();
+}
+
+function resetValues(){
+    varsLoaded = false;
+    
+    //AVATAR
+    avatarWidth = 50;
+    avatarHeight = 50;
+    avatarX = (canvas.width/2) - (avatarWidth/2);
+    avatarY = canvas.height - avatarHeight;
+    avatarMs = 8;
+    
+    //PROJECTILE
+    projectileArray = [];
+    projectileRadius = 5;
+    projectileClr = "red";
+    projectileDmg = 5;
+    projectiletMs = 10;
+    lastProjectile = Date.now();
+    projectileRate = 50;
+    
+    //ENEMY
+    enemyWidth = 50;
+    enemyHeight = 50;
+    enemyHealth = 10;
+    enemyArray = [];
+    enemyDeathArray = [];
+    lastSpawnTime = Date.now();
+    spawnInterval = 500;
+    
+    varsLoaded = true;
+}
+
+
+
 function draw(){
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    drawAvatar();
-    drawProjectiles();
-    drawEnemys();
-    animateEnemyDeath();
-    drawScore();
+    if(!gameReady){
+        loadingAnimation();
+    }
+    else{
+        drawAvatar();
+        drawProjectiles();
+        drawEnemys();
+        animateEnemyDeath();
+        drawScore();
+    }
     
     requestAnimationFrame(draw);
+}
+
+function loadingAnimation(){
+    if(Date.now() - loadingStartTime > 1000){
+        loadingStartTime = Date.now();
+        if(currentMsg < 3){ currentMsg++; }
+        else{ currentMsg = 0; }
+        loadingMsg = loadingMsgArray[currentMsg];
+    }
+    ctx.font = "60px Courier";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "black";
+    ctx.fillText("LOADING", canvas.width/2, canvas.height/2);
+    ctx.font = "35px Courier";
+    ctx.fillText(loadingMsg, canvas.width/2, canvas.height/2 + 50);
+    gameReady = resourcesLoaded;
 }
 
 function drawAvatar(){
@@ -130,10 +219,7 @@ function drawEnemys(){ //Yes I know
     if(Date.now() >= lastSpawnTime + spawnInterval){
         //SPAWN
         var x = Math.floor(Math.random() *(canvas.width - enemyWidth));
-        var health = Math.floor(Math.random() * (maxHealth - minHealth) + minHealth);
-        var width = health / 10;
-        var height = Math.floor(width * 0.8);
-        enemyArray.push(new Enemy(x, 0, enemyWidth, enemyHeight, enemyColour, 500, 5));
+        enemyArray.push(new Enemy(x, 0, enemyWidth, enemyHeight, enemyHealth, 5));
         lastSpawnTime = Date.now();
     }
     
@@ -161,13 +247,6 @@ function drawEnemys(){ //Yes I know
         e.y += e.ms;
         //RENDER
         ctx.drawImage(enemySprite, e.x, e.y, e.width, e.height);
-        /*
-        ctx.beginPath();
-        ctx.rect(e.x, e.y, e.width, e.height);
-        ctx.fillStyle = e.colour;
-        ctx.fill();
-        ctx.closePath();
-        */
     }
     
 }
@@ -176,36 +255,30 @@ function animateEnemyDeath(){
     if(enemyDeathArray.length > 0){
         for(var i = 0 ; i < enemyDeathArray.length ; i++){
             var e = enemyDeathArray[i];
-            if(e.rgba[3] > 0){
-                e.rgba[3] -= 0.02;
+            if(e.a > 0){
+                e.a -= 0.02;
             }
-            else if(e.rgba[3] <= 0){
+            else if(e.a <= 0){
                 enemyDeathArray.splice(i,1);
             }
-            ctx.globalAlpha = e.rgba[3];
-            if(e.rgba[3] <= 0){ ctx.globalAlpha = 0; }
-            console.log(ctx.globalAlpha);
+            ctx.globalAlpha = e.a;
+            if(e.a <= 0){ ctx.globalAlpha = 0; }
             ctx.drawImage(enemySprite, e.x, e.y, e.width, e.height);
             ctx.globalAlpha = 1;
-            /*
-            ctx.beginPath();
-            ctx.rect(e.x, e.y, e.width, e.height);
-            ctx.fillStyle = "rgba(" + e.rgba[0] + "," + e.rgba[1] + "," + e.rgba[2] + "," + e.rgba[3] + ")";
-            ctx.fill();
-            ctx.closePath();
-            */
+            //ctx.restore();
         }
     }
 }
 
 function drawScore(){
     ctx.font = "16px Arial";
+    ctx.textAlign = "start";
     ctx.fillStyle = "#0095DD";
     ctx.fillText("Score: "+score, 8, 20);
 }
 
 //UI EVENT LISTENERS
-// up:38 down:40 left:37 right:39
+// up:38 down:40 left:37 right:39 z:90
 document.addEventListener("keydown", function(event){
     //event.preventDefault();
     switch(event.keyCode){
