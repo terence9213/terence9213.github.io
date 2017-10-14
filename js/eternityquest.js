@@ -24,6 +24,9 @@ var currentMsg = 0;
 
 var score = 0;
 
+//BACKGROUND
+var bg;
+
 //AVATAR 
 var avatarSprite;
 var avatarWidth;
@@ -84,15 +87,17 @@ function init(){
     //INIT IMAGE RESOURCES
     avatarSprite = new Image();
     enemySprite = new Image();
-    var imgArray = [avatarSprite, enemySprite];
+    bg = new Image();
+    var imgArray = [avatarSprite, enemySprite, bg];
     for(var i = 0 ; i < imgArray.length ; i++){
         imgArray[i].onload = function(){
             loadedImgs++;
-            if(loadedImgs === totalImgs){ resourcesLoaded = true; }
+            if(loadedImgs === imgArray.length){ resourcesLoaded = true; }
         };
     }
     avatarSprite.src = "img/eternityquest/avatar.png";
     enemySprite.src = "img/eternityquest/enemy.png";
+    bg.src = "img/eternityquest/bg3.png";
     
     //INIT VARS
     resetValues();
@@ -142,6 +147,7 @@ function draw(){
         loadingAnimation();
     }
     else{
+        drawBg();
         drawAvatar();
         drawProjectiles();
         drawEnemys();
@@ -166,6 +172,10 @@ function loadingAnimation(){
     ctx.font = "35px Courier";
     ctx.fillText(loadingMsg, canvas.width/2, canvas.height/2 + 50);
     gameReady = resourcesLoaded;
+}
+
+function drawBg(){
+    ctx.drawImage(bg, 0, 0);
 }
 
 function drawAvatar(){
