@@ -265,17 +265,19 @@ function animateEnemyDeath(){
     if(enemyDeathArray.length > 0){
         for(var i = 0 ; i < enemyDeathArray.length ; i++){
             var e = enemyDeathArray[i];
-            if(e.a > 0){
-                e.a -= 0.02;
+            if(e){
+                if(e.a > 0){
+                    e.a -= 0.02;
+                }
+                else if(e.a <= 0){
+                    enemyDeathArray.splice(i,1);
+                }
+                ctx.globalAlpha = e.a;
+                if(e.a <= 0){ ctx.globalAlpha = 0; }
+                ctx.drawImage(enemySprite, e.x, e.y, e.width, e.height);
+                ctx.globalAlpha = 1;
+                //ctx.restore();
             }
-            else if(e.a <= 0){
-                enemyDeathArray.splice(i,1);
-            }
-            ctx.globalAlpha = e.a;
-            if(e.a <= 0){ ctx.globalAlpha = 0; }
-            ctx.drawImage(enemySprite, e.x, e.y, e.width, e.height);
-            ctx.globalAlpha = 1;
-            //ctx.restore();
         }
     }
 }
