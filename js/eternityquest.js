@@ -10,19 +10,35 @@ var ctx = canvas.getContext("2d");
 canvas.width = 600;
 canvas.height = 800;
 
-var totalImgs = 2;  
+var totalImgs;  
 var loadedImgs = 0; 
 var resourcesLoaded = false;
 var gameReady = false;
 
 var loadingStartTime;
 var loadingMsg = "* * * * *";
-var loadingMsgArray = ["* * * * *", "Prismatic beams aligning", "Calibrating void lenses", "Prismatic core online"];
+var loadingMsgArray = ["* * * * *", "Prismatic beams aligning", "Calibrating void lenses", "Phase crystals charged"];
 var currentMsg = 0;
 //Phase crystals charged
+//Prismatic core online
 //Peradak kural
 
 var score = 0;
+var lvl = 1;
+var nextLvlScore = 50;
+var nextLvlInterval = 50;
+var gameState = 0;
+
+//TRANSITION
+var transitionAlpha = 0;
+var transitionBg;
+
+//MENU BACKGROUND
+var menuBg;
+var mouseIcon;
+var keyboardIcon;
+var soundIcon;
+var muteIcon;
 
 //BACKGROUND
 var bg;
@@ -34,6 +50,8 @@ var avatarHeight;
 var avatarX;
 var avatarY;
 var avatarMs; // movement speed in px relative to x/y
+var avatarMsX;
+var avatarMsY;
 
 //PROJECTILE
 var projectileArray;
@@ -58,7 +76,6 @@ var enemyArray;
 var enemyDeathArray;
 var lastSpawnTime;
 var spawnInterval; //in ms
-
 //ENEMY OBJ
 function Enemy(x, y, width, height, health, ms){
     this.x = x;
@@ -71,24 +88,40 @@ function Enemy(x, y, width, height, health, ms){
 }
 
 //UI EVENTS
-var up = false;
-var down = false;
-var left = false;
-var right = false;
-var fire = false;
+var up;
+var down;
+var left;
+var right;
+var fire;
+
+//MOUSE
+var mouseControl = false;
+var mouseX;
+var mouseY;
+
+//SOUND
+var mute = false;
 
 init();
 // -- INIT -- //
 function init(){
     loadingStartTime = Date.now();
+    changeGameState(0);
     //INIT LOADING GRAPHICS
     draw();
     
     //INIT IMAGE RESOURCES
     avatarSprite = new Image();
     enemySprite = new Image();
+    transitionBg = new Image();
+    menuBg = new Image();
     bg = new Image();
-    var imgArray = [avatarSprite, enemySprite, bg];
+    mouseIcon = new Image();
+    keyboardIcon = new Image();
+    soundIcon = new Image();
+    muteIcon = new Image();
+    
+    var imgArray = [avatarSprite, enemySprite, transitionBg, menuBg, bg, mouseIcon, keyboardIcon, soundIcon, muteIcon];
     for(var i = 0 ; i < imgArray.length ; i++){
         imgArray[i].onload = function(){
             loadedImgs++;
@@ -97,11 +130,20 @@ function init(){
     }
     avatarSprite.src = "img/eternityquest/avatar.png";
     enemySprite.src = "img/eternityquest/enemy.png";
+    transitionBg.src = "img/eternityquest/bg-transition.png";
+    menuBg.src = "img/eternityquest/menu-bg.png";
     bg.src = "img/eternityquest/bg3.png";
+    mouseIcon.src = "img/eternityquest/mouse-icon.png";
+    keyboardIcon.src = "img/eternityquest/keyboard-icon.png";
+    soundIcon.src = "img/eternityquest/sound-icon.png";
+    muteIcon.src = "img/eternityquest/mute-icon.png";
+    
     
     //INIT VARS
     resetValues();
     
+    //EVENT LISTENERS
+    addEventListeners();
     
     //FIRST DRAW
     //draw();
@@ -114,8 +156,10 @@ function resetValues(){
     avatarWidth = 50;
     avatarHeight = 50;
     avatarX = (canvas.width/2) - (avatarWidth/2);
-    avatarY = canvas.height - avatarHeight;
+    avatarY = canvas.height - 70;
     avatarMs = 8;
+    avatarMsX = 8;
+    avatarMsY = 8;
     
     //PROJECTILE
     projectileArray = [];
@@ -124,7 +168,7 @@ function resetValues(){
     projectileDmg = 5;
     projectiletMs = 10;
     lastProjectile = Date.now();
-    projectileRate = 50;
+    projectileRate = 100;
     
     //ENEMY
     enemyWidth = 50;
@@ -133,12 +177,48 @@ function resetValues(){
     enemyArray = [];
     enemyDeathArray = [];
     lastSpawnTime = Date.now();
-    spawnInterval = 500;
+    spawnInterval = 1000;
+    
+    up = false;
+    down = false;
+    left = false;
+    right = false;
+    fire = false;
     
     varsLoaded = true;
 }
 
+function nextLvl(){
+    enemyHealth += 5;
+    spawnInterval -= 100;
+}
 
+function toggleMouseControl(){
+    mouseControl = !mouseControl;
+    avatarMsX = avatarMs;
+    avatarMsY = avatarMs;
+}
+
+function toggleMute(){
+    mute = !mute;
+}
+
+function changeGameState(targetGameState){
+    switch(targetGameState){
+        case 0:
+            gameState = 0;
+            canvas.style.cursor = "wait";
+            break;
+        case 1:
+            gameState = 1;
+            canvas.style.cursor = "default";
+            break;
+        case 2:
+            gameState = 2;
+            canvas.style.cursor = "none";
+            break;
+    }
+}
 
 function draw(){
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -147,17 +227,29 @@ function draw(){
         loadingAnimation();
     }
     else{
-        drawBg();
-        drawAvatar();
-        drawProjectiles();
-        drawEnemys();
-        animateEnemyDeath();
-        drawScore();
+        switch(gameState){
+            case 0:
+                drawTransition();
+                break;
+            case 1:
+                drawMenu();
+                break;
+            case 2:
+                drawGame();
+                break;
+        }
+        
+    }
+    if(score >= nextLvlScore){
+        lvl++;
+        nextLvlScore += nextLvlInterval;
+        nextLvl();
     }
     
     requestAnimationFrame(draw);
 }
 
+//LOADING SCREEN
 function loadingAnimation(){
     if(Date.now() - loadingStartTime > 1000){
         loadingStartTime = Date.now();
@@ -174,29 +266,98 @@ function loadingAnimation(){
     gameReady = resourcesLoaded;
 }
 
+//TRANSITION ANIMATION
+//gameState: 0
+function drawTransition(){
+    ctx.globalAlpha = transitionAlpha;
+    ctx.drawImage(transitionBg, 0, 0);
+    if(transitionAlpha < 1){
+        transitionAlpha += 0.02;
+    }
+    else{
+        ctx.globalAlpha = 1;
+        changeGameState(1);
+    }
+    
+}
+
+//MENU ANIMATION
+//gameState: 1
+function drawMenu(){
+    ctx.drawImage(menuBg, 0, 0);
+    if((mouseX > 200 && mouseX < 400 && mouseY > 655 && mouseY < 745) || 
+       (mouseX > 425 && mouseX < 575 && mouseY > 655 && mouseY < 745) ||
+       ((mouseX > 25 && mouseX < 175 && mouseY > 655 && mouseY < 745))){
+        canvas.style.cursor = "pointer";
+    }
+    else{
+        canvas.style.cursor = "default";
+    }
+    
+    if(mouseControl){
+        ctx.drawImage(mouseIcon, 475, 675);
+    }
+    else{
+        ctx.drawImage(keyboardIcon, 475, 675);
+    }
+    
+    if(mute){
+        ctx.drawImage(muteIcon, 75, 675);
+    }
+    else{
+        ctx.drawImage(soundIcon, 75, 675);
+    }
+    
+}
+
+//MAIN GAME ANIMATIONS
+//gameState: 2
+function drawGame(){
+    drawBg();
+    drawAvatar();
+    drawProjectiles();
+    drawEnemys();
+    animateEnemyDeath();
+    drawScore();
+    drawLvl();
+}
+
 function drawBg(){
     ctx.drawImage(bg, 0, 0);
 }
 
 function drawAvatar(){
+        
+    
+    //POSITIONING
+    if(mouseControl){
+        //BORDER COLLISION
+        if(mouseY < avatarY){ up = true; } else { up = false; }
+        if(mouseY > avatarY){ down = true; } else { down = false; }
+        if(mouseX < avatarX){ left = true; } else { left = false; }
+        if(mouseX > avatarX){ right = true; } else { right = false; }
+        
+        if(Math.abs(mouseX - avatarX) < 10){
+            avatarMsX = 1;
+        }
+        else{ avatarMsX = avatarMs; }
+        if(Math.abs(mouseY - avatarY) < 10){
+            avatarMsY = 1;
+        }
+        else{ avatarMsY = avatarMs; }
+    }
     //BORDER COLLISION
     if(avatarY <= 0){ up = false; }
     if(avatarY >= canvas.height - avatarHeight){ down = false; }
     if(avatarX <= 0){ left = false; }
     if(avatarX >= canvas.width - avatarWidth){ right = false; }
     
-    //POSITIONING
-    if(up){ avatarY -= avatarMs; }
-    if(down){ avatarY += avatarMs; }
-    if(left){ avatarX -= avatarMs; }
-    if(right){ avatarX += avatarMs; }
-    /*
-    ctx.beginPath();
-    ctx.rect(avatarX, avatarY, avatarWidth, avatarHeight);
-    ctx.fillStyle = "blue";
-    ctx.fill();
-    ctx.closePath();
-    */
+    //FINAL POSITION
+    if(up){ avatarY -= avatarMsY; }
+    if(down){ avatarY += avatarMsY; }
+    if(left){ avatarX -= avatarMsX; }
+    if(right){ avatarX += avatarMsX; }
+    
     ctx.drawImage(avatarSprite, avatarX, avatarY, avatarWidth, avatarHeight);
     
 }
@@ -286,50 +447,110 @@ function drawScore(){
     ctx.font = "16px Arial";
     ctx.textAlign = "start";
     ctx.fillStyle = "#0095DD";
-    ctx.fillText("Score: "+score, 8, 20);
+    ctx.fillText("Score: " + score, 8, 20);
 }
 
-//UI EVENT LISTENERS
-// up:38 down:40 left:37 right:39 z:90
-document.addEventListener("keydown", function(event){
-    //event.preventDefault();
-    switch(event.keyCode){
-        case 38:
-            up = true;
-            break;
-        case 40:
-            down = true;
-            break;
-        case 37:
-            left = true;
-            break;
-        case 39:
-            right = true;
-            break;
-        case 90:
-            fire = true;
-            break;
-    }
-});
+function drawLvl(){
+    ctx.font = "16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#0095DD";
+    ctx.fillText("Level: " + lvl, canvas.width/2, 20);
+}
 
-document.addEventListener("keyup", function(event){
-    //event.preventDefault();
-    //console.log(event.keyCode);
-    switch(event.keyCode){
-        case 38:
-            up = false;
-            break;
-        case 40:
-            down = false;
-            break;
-        case 37:
-            left = false;
-            break;
-        case 39:
-            right = false;
-            break;
-        case 90:
-            fire = false;
-            break;
-    }
-});
+
+
+function addEventListeners(){
+    //UI EVENT LISTENERS
+    // up:38 down:40 left:37 right:39 z:90
+    document.addEventListener("keydown", function(event){
+        //event.preventDefault();
+        switch(event.keyCode){
+            case 38:
+                up = true;
+                break;
+            case 40:
+                down = true;
+                break;
+            case 37:
+                left = true;
+                break;
+            case 39:
+                right = true;
+                break;
+            case 90:
+                fire = true;
+                break;
+        }
+    });
+
+    document.addEventListener("keyup", function(event){
+        //event.preventDefault();
+        //console.log(event.keyCode);
+        switch(event.keyCode){
+            case 38:
+                up = false;
+                break;
+            case 40:
+                down = false;
+                break;
+            case 37:
+                left = false;
+                break;
+            case 39:
+                right = false;
+                break;
+            case 90:
+                fire = false;
+                break;
+        }
+    });
+    
+    //MOUSE
+    //Mouse POS
+    document.addEventListener("mousemove", function(event){
+        mouseX = event.clientX - canvas.offsetLeft;
+        mouseY = event.clientY - canvas.offsetTop;
+        mouseXYDisplay.textContent = "X: " + mouseX + " Y: " + mouseY;
+    });
+    //Mouse DOWN
+    document.addEventListener("mousedown", function(event){
+        switch(gameState){
+            case 1:
+                //MENU
+                //Do nothing (action on mouse up only)
+                //console.log(event);
+                break;
+            case 2:
+                //GAME
+                fire = true;
+                break;
+        }
+    });
+    //Mouse UP
+    document.addEventListener("mouseup", function(event){
+        switch(gameState){
+            case 1:
+                //MENU
+                //playbutton center (300,700)
+                // width: 200 || height: 90
+                if(mouseX > 200 && mouseX < 400 && mouseY > 655 && mouseY < 745){
+                    console.log("CLICKED");
+                    changeGameState(2);
+                }
+                if(mouseX > 425 && mouseX < 575 && mouseY > 655 && mouseY < 745){
+                    toggleMouseControl();
+                }
+                if(mouseX > 25 && mouseX < 175 && mouseY > 655 && mouseY < 745){
+                    toggleMute();
+                }
+                break;
+            case 2:
+                //GAME
+                fire = false;
+                break;
+        }
+    });
+}
+
+//REMOVE AFTER DEBUG FOR RELEASE
+var mouseXYDisplay = document.getElementById("mouseXY");
