@@ -43,6 +43,8 @@ var muteIcon;
 //BACKGROUND
 var bg;
 
+var avatarDeathDuration = 500;
+var avatarDeathStart;
 //AVATAR 
 var avatarSprite;
 var avatarWidth;
@@ -52,6 +54,7 @@ var avatarY;
 var avatarMs; // movement speed in px relative to x/y
 var avatarMsX;
 var avatarMsY;
+var avatarHealth;
 
 //PROJECTILE
 var projectileArray;
@@ -98,6 +101,8 @@ var fire;
 var mouseControl = false;
 var mouseX;
 var mouseY;
+var avatarTargetX;
+var avatarTargetY;
 
 //SOUND
 var mute = false;
@@ -160,6 +165,7 @@ function resetValues(){
     avatarMs = 8;
     avatarMsX = 8;
     avatarMsY = 8;
+    avatarHealth = 1;
     
     //PROJECTILE
     projectileArray = [];
@@ -215,6 +221,10 @@ function changeGameState(targetGameState){
             break;
         case 2:
             gameState = 2;
+            //canvas.style.cursor = "none";
+            break;
+        case 3:
+            gameState = 3;
             canvas.style.cursor = "none";
             break;
     }
@@ -236,6 +246,9 @@ function draw(){
                 break;
             case 2:
                 drawGame();
+                break;
+            case 3:
+                drawAvatarDeath();
                 break;
         }
         
@@ -277,6 +290,7 @@ function drawTransition(){
     else{
         ctx.globalAlpha = 1;
         changeGameState(1);
+        transitionAlpha = 0;
     }
     
 }
@@ -320,31 +334,63 @@ function drawGame(){
     animateEnemyDeath();
     drawScore();
     drawLvl();
+    if(avatarHealth <= 0){
+        avatarDeathStart = Date.now();
+        changeGameState(3);
+    }
 }
+
+//AVATAR DEATH ANIMATION
+//gameState: 3;
+function drawAvatarDeath(){
+    if(Date.now() < avatarDeathStart + avatarDeathDuration){
+        drawBg();
+        drawDeadAvatar();
+    }
+    else{
+        resetValues();
+        changeGameState(0);
+    }
+    
+}
+
 
 function drawBg(){
     ctx.drawImage(bg, 0, 0);
 }
 
 function drawAvatar(){
-        
-    
     //POSITIONING
     if(mouseControl){
-        //BORDER COLLISION
-        if(mouseY < avatarY){ up = true; } else { up = false; }
-        if(mouseY > avatarY){ down = true; } else { down = false; }
-        if(mouseX < avatarX){ left = true; } else { left = false; }
-        if(mouseX > avatarX){ right = true; } else { right = false; }
+        //MOUSE POSITION
+        if(avatarTargetY < avatarY){ up    = true; } else { up    = false; }
+        if(avatarTargetY > avatarY){ down  = true; } else { down  = false; }
+        if(avatarTargetX < avatarX){ left  = true; } else { left  = false; }
+        if(avatarTargetX > avatarX){ right = true; } else { right = false; }
+        var distX = Math.abs(avatarTargetX - avatarX);
+        var distY = Math.abs(avatarTargetY - avatarY);
+        //DOUBLE AXIS MOVEMENT
+        if( distX > distY ){
+            avatarMsX = avatarMs;
+            avatarMsY = distY / (distX/avatarMs);
+        }
+        else if(distY > distX){
+            avatarMsX = distX / (distY/avatarMs);
+            avatarMsY = avatarMs;
+        }
+        else{
+            avatarMsX = avatarMs;
+            avatarMsY = avatarMs;
+        }
         
-        if(Math.abs(mouseX - avatarX) < 10){
+        //APPROACH POSITION
+        if(distX < 10){
             avatarMsX = 1;
         }
-        else{ avatarMsX = avatarMs; }
-        if(Math.abs(mouseY - avatarY) < 10){
+        if(distY < 10){
             avatarMsY = 1;
         }
-        else{ avatarMsY = avatarMs; }
+        
     }
     //BORDER COLLISION
     if(avatarY <= 0){ up = false; }
@@ -360,6 +406,10 @@ function drawAvatar(){
     
     ctx.drawImage(avatarSprite, avatarX, avatarY, avatarWidth, avatarHeight);
     
+}
+
+function drawDeadAvatar(){
+    ctx.drawImage(avatarSprite, avatarX, avatarY, avatarWidth, avatarHeight);
 }
 
 function drawProjectiles(){
@@ -394,9 +444,10 @@ function drawEnemys(){ //Yes I know
         lastSpawnTime = Date.now();
     }
     
+    //Iterate enemyArray
     for(var i = 0 ; i < enemyArray.length ; i++){
         var e = enemyArray[i];
-        //BORDER COLLISION
+        //BORDER COLLISION (exit canvas bottom)
         if(e.y >= canvas.height){
             enemyArray.splice(i,1);
         }
@@ -413,6 +464,14 @@ function drawEnemys(){ //Yes I know
                     }
                 }
             }
+        }
+        //AVATAR COLLISION
+        if(avatarX < e.x + e.width &&
+            avatarX + avatarWidth > e.x &&
+            avatarY < e.y + e.height &&
+            avatarY + avatarHeight > e.y){
+            enemyDeathArray.push(enemyArray.splice(i,1)[0]);
+            avatarHealth -= 1;
         }
         //POSITIONING
         e.y += e.ms;
@@ -511,6 +570,10 @@ function addEventListeners(){
         mouseX = event.clientX - canvas.offsetLeft;
         mouseY = event.clientY - canvas.offsetTop;
         mouseXYDisplay.textContent = "X: " + mouseX + " Y: " + mouseY;
+        if(gameState === 2){
+            avatarTargetX = mouseX - avatarWidth/2;
+            avatarTargetY = mouseY - avatarHeight/2;
+        }
     });
     //Mouse DOWN
     document.addEventListener("mousedown", function(event){
