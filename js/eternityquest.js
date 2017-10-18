@@ -96,8 +96,6 @@ var explosionSprite3;
 var explosionWidth;
 var explosionHeight;
 var explosionFrameDuration;
-var explosionFrameStartTime;
-var explosionState;
 var explosionSpriteArray;
 var explosionArray;
 //EXPLOSION OBJECT
@@ -257,7 +255,7 @@ function changeGameState(targetGameState){
             break;
         case 2:
             gameState = 2;
-            //canvas.style.cursor = "none";
+            canvas.style.cursor = "crosshair";
             break;
         case 3:
             gameState = 3;
@@ -385,6 +383,7 @@ function drawAvatarDeath(){
         drawBg();
         drawDeadAvatar();
         animateExplosions();
+        drawDeathMessage();
     }
     else{
         resetValues();
@@ -578,6 +577,14 @@ function drawLvl(){
     ctx.fillText("Level: " + lvl, canvas.width/2, 20);
 }
 
+function drawDeathMessage(){
+    ctx.font = "65px Courier";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "white";
+    ctx.fillText("YOU DIED", canvas.width/2, canvas.height/2);
+    ctx.font = "50px Courier";
+    ctx.fillText("Final Score : " + score, canvas.width/2, canvas.height - 300);
+}
 
 
 function addEventListeners(){
