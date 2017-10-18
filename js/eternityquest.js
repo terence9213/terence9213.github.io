@@ -10,7 +10,6 @@ var ctx = canvas.getContext("2d");
 canvas.width = 600;
 canvas.height = 800;
 
-var totalImgs;  
 var loadedImgs = 0; 
 var resourcesLoaded = false;
 var gameReady = false;
@@ -43,7 +42,7 @@ var muteIcon;
 //BACKGROUND
 var bg;
 
-var avatarDeathDuration = 500;
+var avatarDeathDuration;
 var avatarDeathStart;
 //AVATAR 
 var avatarSprite;
@@ -90,6 +89,26 @@ function Enemy(x, y, width, height, health, ms){
     this.ms = ms;
 }
 
+//EXPLOSION EFFECT
+var explosionSprite1;
+var explosionSprite2;
+var explosionSprite3;
+var explosionWidth;
+var explosionHeight;
+var explosionFrameDuration;
+var explosionFrameStartTime;
+var explosionState;
+var explosionSpriteArray;
+var explosionArray;
+//EXPLOSION OBJECT
+function Explosion(x, y){
+    this.x = x;
+    this.y = y;
+    this.state = 0;
+    this.explosionFrameStartTime = Date.now();
+    this.complete = false;
+}
+
 //UI EVENTS
 var up;
 var down;
@@ -125,8 +144,13 @@ function init(){
     keyboardIcon = new Image();
     soundIcon = new Image();
     muteIcon = new Image();
+    explosionSprite1 = new Image();
+    explosionSprite2 = new Image();
+    explosionSprite3 = new Image();
     
-    var imgArray = [avatarSprite, enemySprite, transitionBg, menuBg, bg, mouseIcon, keyboardIcon, soundIcon, muteIcon];
+    var imgArray = [avatarSprite, enemySprite, transitionBg, menuBg, bg, 
+                    mouseIcon, keyboardIcon, soundIcon, muteIcon,
+                    explosionSprite1, explosionSprite2, explosionSprite3];
     for(var i = 0 ; i < imgArray.length ; i++){
         imgArray[i].onload = function(){
             loadedImgs++;
@@ -142,6 +166,9 @@ function init(){
     keyboardIcon.src = "img/eternityquest/keyboard-icon.png";
     soundIcon.src = "img/eternityquest/sound-icon.png";
     muteIcon.src = "img/eternityquest/mute-icon.png";
+    explosionSprite1.src = "img/eternityquest/explosion1.png";
+    explosionSprite2.src = "img/eternityquest/explosion2.png";
+    explosionSprite3.src = "img/eternityquest/explosion3.png";
     
     
     //INIT VARS
@@ -157,6 +184,7 @@ function init(){
 function resetValues(){
     varsLoaded = false;
     
+    avatarDeathDuration = 1000;
     //AVATAR
     avatarWidth = 50;
     avatarHeight = 50;
@@ -184,6 +212,14 @@ function resetValues(){
     enemyDeathArray = [];
     lastSpawnTime = Date.now();
     spawnInterval = 1000;
+    
+    //EXPLOSION
+    explosionWidth = 50;
+    explosionHeight = 50;
+    explosionFrameDuration = 100;
+    explosionState = 0;
+    explosionSpriteArray = [explosionSprite1, explosionSprite2, explosionSprite3];
+    explosionArray = [];
     
     up = false;
     down = false;
@@ -332,10 +368,12 @@ function drawGame(){
     drawProjectiles();
     drawEnemys();
     animateEnemyDeath();
+    animateExplosions();
     drawScore();
     drawLvl();
     if(avatarHealth <= 0){
         avatarDeathStart = Date.now();
+        explosionFrameStartTime = Date.now();
         changeGameState(3);
     }
 }
@@ -346,6 +384,7 @@ function drawAvatarDeath(){
     if(Date.now() < avatarDeathStart + avatarDeathDuration){
         drawBg();
         drawDeadAvatar();
+        animateExplosions();
     }
     else{
         resetValues();
@@ -460,6 +499,7 @@ function drawEnemys(){ //Yes I know
                     projectileArray.splice(j,1);
                     if(e.health <= 0){
                         enemyDeathArray.push(enemyArray.splice(i,1)[0]);
+                        explosionArray.push(new Explosion(e.x, e.y));
                         score += 1;
                     }
                 }
@@ -471,6 +511,7 @@ function drawEnemys(){ //Yes I know
             avatarY < e.y + e.height &&
             avatarY + avatarHeight > e.y){
             enemyDeathArray.push(enemyArray.splice(i,1)[0]);
+            explosionArray.push(new Explosion(avatarX, avatarY));
             avatarHealth -= 1;
         }
         //POSITIONING
@@ -497,6 +538,27 @@ function animateEnemyDeath(){
                 ctx.drawImage(enemySprite, e.x, e.y, e.width, e.height);
                 ctx.globalAlpha = 1;
                 //ctx.restore();
+            }
+        }
+    }
+}
+
+function animateExplosions(){
+    if(explosionArray.length > 0){
+        for(var i = 0 ; i < explosionArray.length ; i++){
+            var e = explosionArray[i];
+            if(!e.complete){
+                if(Date.now() < e.explosionFrameStartTime + explosionFrameDuration){
+                    ctx.drawImage(explosionSpriteArray[e.state], e.x, e.y, explosionWidth, explosionHeight);
+                }
+                else if(e.state < 2){
+                    e.state++;
+                    e.explosionFrameStartTime = Date.now();
+                    ctx.drawImage(explosionSpriteArray[e.state], e.x, e.y, explosionWidth, explosionHeight);
+                }
+                else{
+                    e.complete = true;
+                }
             }
         }
     }
@@ -567,8 +629,10 @@ function addEventListeners(){
     //MOUSE
     //Mouse POS
     document.addEventListener("mousemove", function(event){
-        mouseX = event.clientX - canvas.offsetLeft;
-        mouseY = event.clientY - canvas.offsetTop;
+        //mouseX = event.clientX - canvas.offsetLeft;
+        //mouseY = event.clientY - canvas.offsetTop;
+        mouseX = event.pageX - canvas.offsetLeft;
+        mouseY = event.pageY - canvas.offsetTop;
         mouseXYDisplay.textContent = "X: " + mouseX + " Y: " + mouseY;
         if(gameState === 2){
             avatarTargetX = mouseX - avatarWidth/2;
