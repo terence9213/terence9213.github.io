@@ -22,8 +22,8 @@ var currentMsg = 0;
 //Prismatic core online
 //Peradak kural
 
-var score = 0;
-var lvl = 1;
+var score;
+var lvl;
 var nextLvlScore = 50;
 var nextLvlInterval = 50;
 var gameState = 0;
@@ -55,8 +55,57 @@ var avatarMsX;
 var avatarMsY;
 var avatarHealth;
 
+//WEAPON
+var activeWeapon;
+var inventory;
+var weaponArray;
+//WEAPON TYPES : 
+//1:basic 2:sp 3:beam
+//WEAPON OBJ
+function Weapon(name, type){
+    this.name = name;
+    this.type = type;
+}
+//BASIC WEAPON
+function BasicWeapon(name, type, dmgArray, rateArray, ms, barrelCount, clr){
+    Weapon.call(this, name, type);
+    this.lvl = 0;
+    this.dmgArray = dmgArray;
+    this.rateArray = rateArray;
+    this.projectileMs = ms;
+    this.barrelCount = barrelCount;
+    this.projectileClr = clr;
+    this.dmg = function(){return this.dmgArray[this.lvl];};
+    this.rate = function(){return this.rateArray[this.lvl];};
+}
+BasicWeapon.prototype = Object.create(Weapon.prototype);
+BasicWeapon.prototype.constructor = Weapon;
+//SP WEAPON
+function SpWeapon(name, type, dmgArray, rateArray, ms, barrelCount, sprite, width, height){
+    BasicWeapon.call(this, name, type, dmgArray, rateArray, ms, barrelCount, null);
+    this.projectileSprite = sprite;
+    this.projectileWidth = width;
+    this.projectileHeight = height;
+}
+SpWeapon.prototype = Object.create(BasicWeapon.prototype);
+SpWeapon.prototype.constructor = BasicWeapon;
+//BEAM WEAPON
+function BeamWeapon(name, type, dmg, tickInterval, clr){
+    Weapon.call(this, name, type);
+    this.tickDmg = dmg;
+    this.tickInterval = tickInterval;
+    this.clr = clr;
+    this.lastTickTime;
+    this.tick = false;
+    this.beamOrigin;
+}
+
+//WEAPON PROJECTILE SPRITES
+var projectileFireballSprite;
+
 //PROJECTILE
 var projectileArray;
+var spProjectileArray;
 var projectileRadius;
 var projectileClr;
 var projectileDmg;
@@ -64,9 +113,12 @@ var projectiletMs;
 var lastProjectile;
 var projectileRate; // in ms
 //PROJECTILE OBJ
-function Projectile(){
-    this.x = avatarX + avatarWidth/2;
-    this.y = avatarY + avatarHeight/2;
+function Projectile(x,y, width, height){
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.actualX = x + (50-width)/2;
 }
 
 //ENEMY
@@ -145,10 +197,12 @@ function init(){
     explosionSprite1 = new Image();
     explosionSprite2 = new Image();
     explosionSprite3 = new Image();
+    projectileFireballSprite = new Image();
     
     var imgArray = [avatarSprite, enemySprite, transitionBg, menuBg, bg, 
                     mouseIcon, keyboardIcon, soundIcon, muteIcon,
-                    explosionSprite1, explosionSprite2, explosionSprite3];
+                    explosionSprite1, explosionSprite2, explosionSprite3,
+                    projectileFireballSprite];
     for(var i = 0 ; i < imgArray.length ; i++){
         imgArray[i].onload = function(){
             loadedImgs++;
@@ -167,10 +221,13 @@ function init(){
     explosionSprite1.src = "img/eternityquest/explosion1.png";
     explosionSprite2.src = "img/eternityquest/explosion2.png";
     explosionSprite3.src = "img/eternityquest/explosion3.png";
+    projectileFireballSprite.src = "img/eternityquest/fireball.png";
     
+    //INIT WEAPONS
+    initWeapons();
     
     //INIT VARS
-    resetValues();
+    resetValues(); 
     
     //EVENT LISTENERS
     addEventListeners();
@@ -179,10 +236,29 @@ function init(){
     //draw();
 }
 
+function initWeapons(){
+    weaponArray = 
+    [
+        new BasicWeapon("Blaster", "basic", 
+                    [5, 10, 15, 20, 25, 30], 
+                    [100, 90, 80, 70, 60, 50], 10, 1, "red"),
+        new BasicWeapon("Triple Blaster", "basic", 
+                    [5, 10, 15, 20, 25, 30], 
+                    [100, 90, 80, 70, 60, 50], 10, 3, "blue"),
+        new SpWeapon("Fireball", "sp", 
+                    [25, 35, 50, 70, 90, 100], 
+                    [200, 180, 150, 120, 80, 40], 8, null, projectileFireballSprite, 30, 50),
+        new BeamWeapon("Laser", "beam", 5, 100, "red")
+    ];
+}
+
 function resetValues(){
     varsLoaded = false;
     
-    avatarDeathDuration = 1000;
+    score = 0;
+    lvl = 1;
+    
+    avatarDeathDuration = 2000;
     //AVATAR
     avatarWidth = 50;
     avatarHeight = 50;
@@ -193,8 +269,13 @@ function resetValues(){
     avatarMsY = 8;
     avatarHealth = 1;
     
+    //WEAPONS
+    activeWeapon = weaponArray[3];
+    inventory = [weaponArray[0], weaponArray[1], weaponArray[2], weaponArray[3]];
+    
     //PROJECTILE
     projectileArray = [];
+    spProjectileArray = [];
     projectileRadius = 5;
     projectileClr = "red";
     projectileDmg = 5;
@@ -363,7 +444,7 @@ function drawMenu(){
 function drawGame(){
     drawBg();
     drawAvatar();
-    drawProjectiles();
+    drawTriggerWeapon();
     drawEnemys();
     animateEnemyDeath();
     animateExplosions();
@@ -450,12 +531,43 @@ function drawDeadAvatar(){
     ctx.drawImage(avatarSprite, avatarX, avatarY, avatarWidth, avatarHeight);
 }
 
-function drawProjectiles(){
-    if(fire && Date.now() >= lastProjectile + projectileRate){
-        projectileArray.push(new Projectile());
-        lastProjectile = Date.now();
+function drawTriggerWeapon(){
+    switch(activeWeapon.type){
+        case "basic":
+            if(fire && Date.now() >= lastProjectile + activeWeapon.rate()){
+                if(activeWeapon.barrelCount === 1){
+                    projectileArray.push(new Projectile(avatarX + avatarWidth/2, avatarY + avatarHeight/2));
+                    lastProjectile = Date.now();
+                }
+                else{
+                    projectileArray.push(new Projectile(avatarX + 10, avatarY + avatarHeight/2));
+                    projectileArray.push(new Projectile(avatarX + 25, avatarY + avatarHeight/2 - 5));
+                    projectileArray.push(new Projectile(avatarX + 40, avatarY + avatarHeight/2));
+                    lastProjectile = Date.now();
+                }
+            }
+            break;
+        case "sp":
+            if(fire && Date.now() >= lastProjectile + activeWeapon.rate()){
+                spProjectileArray.push(new Projectile(avatarX, avatarY, activeWeapon.projectileWidth, activeWeapon.projectileHeight));
+                lastProjectile = Date.now();
+            }
+            break;
+        case "beam":
+            if(fire){
+                activeWeapon.beamOrigin = [avatarX + avatarWidth/2, avatarY + avatarHeight/2];
+            }
+            else{
+                activeWeapon.beamOrigin = null;
+            }
+            break;
     }
-    
+    drawBasicProjectiles();
+    drawSpProjectiles();
+    drawBeam();
+}
+
+function drawBasicProjectiles(){
     for(var i = 0 ; i < projectileArray.length ; i++){
         var p = projectileArray[i];
         //BORDER COLLISION
@@ -463,11 +575,43 @@ function drawProjectiles(){
             projectileArray.splice(i,1);
         }
         //POSITIONING
-        p.y -= projectiletMs;
+        p.y -= activeWeapon.projectileMs;
         //RENDER
         ctx.beginPath();
         ctx.arc(p.x, p.y, projectileRadius, 0, Math.PI*2, false);
-        ctx.fillStyle = projectileClr;
+        ctx.fillStyle = activeWeapon.projectileClr;
+        ctx.fill();
+        ctx.closePath();
+    }
+}
+
+function drawSpProjectiles(){
+    for(var i = 0 ; i < spProjectileArray.length ; i++){
+        var p = spProjectileArray[i];
+;        //BORDER COLLISION
+        if(p.y <= 0){
+            spProjectileArray.splice(i,1);
+        }
+        //POSITIONING
+        p.y -= activeWeapon.projectileMs;
+        //RENDER
+        ctx.drawImage(activeWeapon.projectileSprite, p.x, p.y, 50, 50);
+    }
+}
+
+function drawBeam(){
+    if(activeWeapon.beamOrigin){
+        ctx.beginPath();
+        if(Date.now() < activeWeapon.lastTickTime + activeWeapon.tickInterval){
+            ctx.rect(activeWeapon.beamOrigin[0], 0, 1, activeWeapon.beamOrigin[1]);
+            activeWeapon.tick = false;
+        }
+        else{
+            ctx.rect(activeWeapon.beamOrigin[0] - 1, 0, 3, activeWeapon.beamOrigin[1]);
+            activeWeapon.tick = true;
+            activeWeapon.lastTickTime = Date.now();
+        }
+        ctx.fillStyle = activeWeapon.clr;
         ctx.fill();
         ctx.closePath();
     }
@@ -491,10 +635,11 @@ function drawEnemys(){ //Yes I know
         }
         //PROJECTILE COLLISIONS
         else{
+            //BASIC PROJECTILES
             for(var j = 0 ; j < projectileArray.length ; j++){
                 var p = projectileArray[j];
                 if(p.x > e.x && p.x < e.x + e.width && p.y > e.y && p.y < e.y + e.height){
-                    e.health -= projectileDmg;
+                    e.health -= activeWeapon.dmg();
                     projectileArray.splice(j,1);
                     if(e.health <= 0){
                         enemyDeathArray.push(enemyArray.splice(i,1)[0]);
@@ -503,6 +648,35 @@ function drawEnemys(){ //Yes I know
                     }
                 }
             }
+            //SP PROJECTILES
+            for(var k = 0 ; k < spProjectileArray.length ; k++){
+                var p = spProjectileArray[k];
+                if(p.actualX < e.x + e.width &&
+                    p.actualX + p.width > e.x &&
+                    p.y < e.y + e.height &&
+                    p.y + p.height > e.y){
+                    e.health -= activeWeapon.dmg();
+                    spProjectileArray.splice(k,1);
+                    if(e.health <= 0){
+                        enemyDeathArray.push(enemyArray.splice(i,1)[0]);
+                        explosionArray.push(new Explosion(e.x, e.y));
+                        score += 1;
+                    }
+                }
+            }
+            //BEAM
+            if(activeWeapon.beamOrigin && activeWeapon.tick && 
+                    activeWeapon.beamOrigin[0] > e.x && activeWeapon.beamOrigin[0] < e.x + e.width){
+                e.health -= activeWeapon.tickDmg;
+                
+                if(e.health <= 0){
+                    enemyDeathArray.push(enemyArray.splice(i,1)[0]);
+                    explosionArray.push(new Explosion(e.x, e.y));
+                    score += 1;
+                }
+            }
+            
+            
         }
         //AVATAR COLLISION
         if(avatarX < e.x + e.width &&
@@ -668,7 +842,6 @@ function addEventListeners(){
                 //playbutton center (300,700)
                 // width: 200 || height: 90
                 if(mouseX > 200 && mouseX < 400 && mouseY > 655 && mouseY < 745){
-                    console.log("CLICKED");
                     changeGameState(2);
                 }
                 if(mouseX > 425 && mouseX < 575 && mouseY > 655 && mouseY < 745){
