@@ -12,12 +12,20 @@ var cookieManager;
 var sizeManager;
 var gameManager;
 var assetManager;
+
 var loader;
 var transition;
+
 var profileManager;
 var profileMenu;
 var profile;
+
 var mainMenu;
+
+var settings;
+var settingsMenu;
+
+var ctxTool;
 var ui;
 var avatar;
 
@@ -48,7 +56,11 @@ function init(){
     
     mainMenu = new MainMenu();
     mainMenu.bg = new Image();
-    assetManager.addAsset(mainMenu.bg, "img/eternityquest/menu-bg.png");
+    assetManager.addAsset(mainMenu.bg, "img/eternityquest/bg-menu.png");
+    
+    settingsMenu = new SettingsMenu();
+    settingsMenu.bg = new Image();
+    assetManager.addAsset(settingsMenu.bg, "img/eternityquest/bg-settings.png");
     
     avatar = new Avatar();
     avatar.sprite = new Image();
@@ -61,6 +73,8 @@ function init(){
     cookieManager = new CookieManager();
     settings = new Settings();
     
+    //CTX TOOL
+    ctxTool = new CtxTool();
     
     //UI EVENT LISTENERS
     ui = new UI();
@@ -69,6 +83,8 @@ function init(){
 
 //SIZE MANAGER
 function SizeManager(){
+    this.spriteWidth;
+    this.spriteHeight;
     this.fontSizeXS;
     this.fontSizeS;
     this.fontSizeL;
@@ -98,6 +114,8 @@ function SizeManager(){
 
         canvas.height = canvas.width/3 *4;
         this.factor = canvas.height/800;
+        this.spriteWidth = this.factor * 50;
+        this.spriteHeight = this.factor * 50;
         this.fontSizeXS = this.factor * 20;
         this.fontSizeS = this.factor * 35;
         this.fontSizeL = this.factor * 60;
@@ -130,8 +148,12 @@ function GameManager(){
             case 4:
                 canvas.style.cursor = "default";
                 break;
-            //MAIN GAME
+            //INVENTORY/SHOP
             case 5:
+                canvas.style.cursor = "default";
+                break;
+            //MAIN GAME
+            case 6:
                 canvas.style.cursor = "crosshair";
                 break;
         }
@@ -162,6 +184,8 @@ function AssetManager(){
 }
 
 //PROFILE MANAGER
+//profile0=Bob|000|0|0|10000|000
+// name | settings | highScore | gold | inventory | inventoryS
 function ProfileManager(){
     this.profileArray = [];
     //this.profile;
@@ -190,6 +214,11 @@ function ProfileManager(){
             cookieManager.setCookie("profile" + slot, this.profileArray[slot].toString());
         }
     };
+    this.updateProfile = function(){
+        profile.updateProfile();
+        this.profileArray[profile.slot] = profile;
+        this.saveProfile(profile.slot);
+    };
     this.deleteProfile = function(slot){
         if(this.profileArray[slot]){
             cookieManager.clearCookie("profile" + slot);
@@ -207,6 +236,15 @@ function Profile(name, slot){
     this.gold = 0;
     this.inventory = "00000";
     this.inventoryS = "000";
+    
+    this.updateProfile = function(){
+        this.name = avatar.name;
+        this.settings = settings.toString();
+        this.highScore = avatar.highScore;
+        this.gold = avatar.gold;
+        this.inventory = avatar.inventory.join("");
+        this.inventoryS = avatar.inventoryS.join("");
+    };
     
     this.load = function(data, slot){
         this.slot = slot;
@@ -244,11 +282,23 @@ function Settings(){
         this.mouseControl = Boolean(parseInt(this.dataArray[2]));
     };
     this.toString = function(){
-        dataArray = [];
-        dataArray.push(+ this.musicMute);
-        dataArray.push(+ this.fxMute);
-        dataArray.push(+ this.mouseControl);
-        return dataArray.join("");
+        this.dataArray = [];
+        this.dataArray.push(+ this.musicMute);
+        this.dataArray.push(+ this.fxMute);
+        this.dataArray.push(+ this.mouseControl);
+        return this.dataArray.join("");
+    };
+    this.toggleMusic = function(){
+        this.musicMute = !this.musicMute;
+        profileManager.updateProfile();
+    };
+    this.toggleFx = function(){
+        this.fxMute = !this.fxMute;
+        profileManager.updateProfile();
+    };
+    this.toggleMouseControl = function(){
+        this.mouseControl = !this.mouseControl;
+        profileManager.updateProfile();
     };
 }
 
@@ -262,13 +312,21 @@ function Avatar(){
     this.ms; // movement speed in px relative to x/y
     this.msX;
     this.msY;
+    
+    this.name;
+    this.score;
+    this.highScore;
+    this.gold;
     this.health;
     
     this.deathDuration;
     this.deathStartTime;
     
     this.activeWeaponIndex;
+    this.loadout = [];
     this.inventory = [];
+    this.inventoryS = [];
+    
     this.cycleWeapons = function(){
         if(activeWeaponIndex < inventory.length){
             activeWeaponIndex++;
@@ -277,8 +335,18 @@ function Avatar(){
             activeWeaponIndex = 0;
         }
     };
-    this.getActiveWeapon = function(){
-        return inventory[activeWeaponIndex];
+    
+    this.init = function(){
+        this.width = sizeManager.spriteWidth;
+        this.height = sizeManager.spriteHeight;
+        
+    };
+    this.load = function(){
+        this.name = profile.name;
+        this.highScore = profile.highScore;
+        this.gold = profile.gold;
+        this.inventory = profile.inventory.split("").map(Number);
+        this.inventoryS = profile.inventoryS.split("").map(Number);
     };
 }
 
@@ -303,6 +371,9 @@ function draw(){
             drawSettingsMenu();
             break;
         case 5:
+            drawInventoryMenu();
+            break;
+        case 6:
             drawGame();
             break;
     }
@@ -396,7 +467,11 @@ function ProfileMenu(){
         }
     };
     this.loadProfile = function(){
-        console.log(this.selectedProfile);
+        profile = profileManager.profileArray[this.selectedProfile];
+        avatar.init();
+        avatar.load();
+        settings.load(profile.settings);
+        gameManager.changeGameState(3);
     };
 }
 //PROFILE MENU
@@ -445,10 +520,107 @@ function drawProfileMenu(){
 //MAIN MENU
 function MainMenu(){
     this.bg;
+    this.rectSettingsBtn = [25*sizeManager.factor, 650*sizeManager.factor, 150*sizeManager.factor, 100*sizeManager.factor];
+    this.rectPlayBtn = [200*sizeManager.factor, 650*sizeManager.factor, 200*sizeManager.factor, 100*sizeManager.factor];
+    this.rectInventoryBtn = [425*sizeManager.factor, 650*sizeManager.factor, 150*sizeManager.factor, 100*sizeManager.factor];
+    this.manageClick = function(){
+        if(ui.targetCollision(null, null, null, null, mainMenu.rectSettingsBtn)){
+            gameManager.changeGameState(4);
+        }
+    };
 }
-//MAIN MANU ANIMATION
+//MAIN MENU ANIMATION
 function drawMainMenu(){
     ctx.drawImage(mainMenu.bg, 0, 0, canvas.width, canvas.height);
+    //CHECK MOUSE TARGET COLLISIONS
+    if(ui.targetCollision(null, null, null, null, mainMenu.rectSettingsBtn) || 
+       ui.targetCollision(null, null, null, null, mainMenu.rectPlayBtn) ||
+       ui.targetCollision(null, null, null, null, mainMenu.rectInventoryBtn) ){
+        canvas.style.cursor = "pointer";
+    }
+    else{ canvas.style.cursor = "default"; }
+}
+
+//SETTINGS MENU
+function SettingsMenu(){
+    this.bg;
+    this.rectMusicSwitch = [415*sizeManager.factor, 135*sizeManager.factor, 70*sizeManager.factor, 35*sizeManager.factor];
+    this.rectFxSwitch = [415*sizeManager.factor, 235*sizeManager.factor, 70*sizeManager.factor, 35*sizeManager.factor];
+    this.rectCtrlSwitch = [265*sizeManager.factor, 560*sizeManager.factor, 70*sizeManager.factor, 35*sizeManager.factor];
+    this.rectBackBtn = [200*sizeManager.factor, 650*sizeManager.factor, 200*sizeManager.factor, 100*sizeManager.factor];
+    this.circle1 = [435*sizeManager.factor, 152*sizeManager.factor, 12.5*sizeManager.factor];
+    this.circle2 = [435*sizeManager.factor, 252*sizeManager.factor, 12.5*sizeManager.factor];
+    this.circleBX = 468*sizeManager.factor;
+    this.circle3 = [285*sizeManager.factor, 577*sizeManager.factor, 12.5*sizeManager.factor];
+    this.circle3BX = 318*sizeManager.factor;
+    this.line1 = [125*sizeManager.factor, 175*sizeManager.factor, 175*sizeManager.factor, 125*sizeManager.factor];
+    this.line2 = [125*sizeManager.factor, 275*sizeManager.factor, 175*sizeManager.factor, 225*sizeManager.factor];
+    this.manageClick = function(){
+        if(ui.targetCollision(null, null, null, null, settingsMenu.rectMusicSwitch)){ settings.toggleMusic(); }
+        if(ui.targetCollision(null, null, null, null, settingsMenu.rectFxSwitch)){ settings.toggleFx(); }
+        if(ui.targetCollision(null, null, null, null, settingsMenu.rectCtrlSwitch)){ settings.toggleMouseControl(); }
+        if(ui.targetCollision(null, null, null, null, settingsMenu.rectBackBtn)){
+            gameManager.changeGameState(3);
+        }
+    };
+}
+//SETTINGS MENU ANIMATION
+function drawSettingsMenu(){
+    ctx.drawImage(settingsMenu.bg, 0, 0, canvas.width, canvas.height);
+    //DRAW SWITCHES
+    //Music
+    if(!settings.musicMute){
+        ctxTool.circle(settingsMenu.circle1[0], settingsMenu.circle1[1], settingsMenu.circle1[2], "#4a4a4a");
+    }
+    else{
+        ctxTool.circle(settingsMenu.circleBX, settingsMenu.circle1[1], settingsMenu.circle1[2], ctxTool.clrGrey);
+        ctxTool.line(settingsMenu.line1[0], settingsMenu.line1[1], settingsMenu.line1[2], settingsMenu.line1[3], 3, ctxTool.clrRed);
+    }
+    //FX
+    if(!settings.fxMute){
+        ctxTool.circle(settingsMenu.circle2[0], settingsMenu.circle2[1], settingsMenu.circle2[2], ctxTool.clrGrey);
+    }
+    else{
+        ctxTool.circle(settingsMenu.circleBX, settingsMenu.circle2[1], settingsMenu.circle2[2], ctxTool.clrGrey);
+        ctxTool.line(settingsMenu.line2[0], settingsMenu.line2[1], settingsMenu.line2[2], settingsMenu.line2[3], 3, ctxTool.clrRed);
+    }
+    //MOUSE CONTROL
+    if(!settings.mouseControl){
+        ctxTool.circle(settingsMenu.circle3[0], settingsMenu.circle3[1], settingsMenu.circle3[2], ctxTool.clrGrey);
+    }
+    else{
+        ctxTool.circle(settingsMenu.circle3BX, settingsMenu.circle3[1], settingsMenu.circle3[2], ctxTool.clrGrey);
+    }
+    //CHECK MOUSE TARGET COLLISIONS
+    if(ui.targetCollision(null, null, null, null, settingsMenu.rectMusicSwitch) || 
+       ui.targetCollision(null, null, null, null, settingsMenu.rectFxSwitch) ||
+       ui.targetCollision(null, null, null, null, settingsMenu.rectCtrlSwitch) ||
+       ui.targetCollision(null, null, null, null, settingsMenu.rectBackBtn) ){
+        canvas.style.cursor = "pointer";
+    }
+    else{ canvas.style.cursor = "default"; }
+}
+
+//DRAWING TOOLS
+function CtxTool(){
+    this.clrGrey = "#4a4a4a";
+    this.clrRed = "#9c1919";
+    this.circle = function(x,y,r,clr){
+        ctx.beginPath();
+        ctx.fillStyle = clr;
+        ctx.arc(x, y, r, 0, Math.PI*2, false);
+        ctx.fill();
+        ctx.closePath();
+    };
+    this.line = function(ox,oy,tx,ty,w,clr){
+        ctx.beginPath();
+        ctx.lineWidth = w;
+        ctx.strokeStyle = clr;
+        ctx.moveTo(ox,oy);
+        ctx.lineTo(tx,ty);
+        ctx.closePath();
+        ctx.stroke();
+    };
 }
 
 //UI
@@ -532,8 +704,10 @@ function UI(){
                 profileMenu.manageClick();
                 break;
             case 3:
+                mainMenu.manageClick();
                 break;
             case 4:
+                settingsMenu.manageClick();
                 break;
             case 5:
                 break;
