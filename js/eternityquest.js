@@ -25,6 +25,11 @@ var mainMenu;
 var settings;
 var settingsMenu;
 
+var inventoryMenu;
+
+var weaponManager;
+var weaponType;
+
 var ctxTool;
 var ui;
 var avatar;
@@ -61,6 +66,29 @@ function init(){
     settingsMenu = new SettingsMenu();
     settingsMenu.bg = new Image();
     assetManager.addAsset(settingsMenu.bg, "img/eternityquest/bg-settings.png");
+    
+    inventoryMenu = new InventoryMenu();
+    inventoryMenu.bgP = new Image();
+    inventoryMenu.bgS = new Image();
+    assetManager.addAsset(inventoryMenu.bgP, "img/eternityquest/bg-inventory-p.png");
+    assetManager.addAsset(inventoryMenu.bgS, "img/eternityquest/bg-inventory-s.png");
+    
+    weaponType = {
+        PROJECTILE_BASIC: 0,
+        PROJECTILE_SP: 1,
+        BEAM: 2,
+        SECONDARY: 3
+    };
+    weaponManager = new WeaponManager();
+    weaponManager.icon.blaster = new Image();
+    weaponManager.icon.fireball = new Image();
+    weaponManager.icon.laser = new Image();
+    weaponManager.sprites.fireball = new Image();
+    assetManager.addAsset(weaponManager.icon.blaster, "img/eternityquest/blaster.png");
+    assetManager.addAsset(weaponManager.icon.fireball, "img/eternityquest/fireball.png");
+    assetManager.addAsset(weaponManager.icon.laser, "img/eternityquest/laser.png");
+    weaponManager.sprites.fireball = weaponManager.icon.fireball;
+    weaponManager.initWeapons();
     
     avatar = new Avatar();
     avatar.sprite = new Image();
@@ -242,7 +270,7 @@ function Profile(name, slot){
         this.settings = settings.toString();
         this.highScore = avatar.highScore;
         this.gold = avatar.gold;
-        this.inventory = avatar.inventory.join("");
+        this.inventory = avatar.inventoryP.join("");
         this.inventoryS = avatar.inventoryS.join("");
     };
     
@@ -324,11 +352,11 @@ function Avatar(){
     
     this.activeWeaponIndex;
     this.loadout = [];
-    this.inventory = [];
+    this.inventoryP = [];
     this.inventoryS = [];
     
     this.cycleWeapons = function(){
-        if(activeWeaponIndex < inventory.length){
+        if(activeWeaponIndex < this.inventory.length){
             activeWeaponIndex++;
         }
         else{
@@ -339,15 +367,81 @@ function Avatar(){
     this.init = function(){
         this.width = sizeManager.spriteWidth;
         this.height = sizeManager.spriteHeight;
-        
     };
     this.load = function(){
         this.name = profile.name;
         this.highScore = profile.highScore;
         this.gold = profile.gold;
-        this.inventory = profile.inventory.split("").map(Number);
+        this.inventoryP = profile.inventory.split("").map(Number);
         this.inventoryS = profile.inventoryS.split("").map(Number);
     };
+}
+
+//WEAPON MANAGER
+function WeaponManager(){
+    this.icon = {
+        blaster: null,
+        fireball: null,
+        laser: null
+    };
+    this.sprites = {
+        fireball: null
+    };
+    this.weaponArrayP = [];
+    this.weaponArrayS = [];
+    this.initWeapons = function(){
+        this.weaponArrayP = [
+            new WeaponPProjectileB("Blaster", weaponType.PROJECTILE_BASIC, 0,
+                this.icon.blaster, "Standard issue 25 kilowatt plasma blaster",
+                [0, 5, 10, 15, 20, 25],
+                [0, 100, 90, 80, 70, 60],
+                10, "red"
+            ),
+            new WeaponPProjectileSP("Fireball", weaponType.PROJECTILE_SP, 0,
+                this.icon.fireball, "Destroy your enemies with balls of fire.",
+                [0, 25, 35, 55, 75, 100],
+                [0, 200, 190, 180, 175, 150],
+                10, this.sprites.fireball, 30, 50
+            ),
+            new WeaponPBeam("Laser", weaponType.BEAM, 0,
+                this.icon.laser, "Long range sustained photon beam weapon.",
+                [0, 5, 10, 15, 20, 25],
+                [0, 120, 110, 100, 90, 80]
+            )
+        ];
+        this.weaponArrayS = [
+            new WeaponS("EMP", weaponType.SECONDARY, 0)
+        ];
+    };
+}
+function Weapon(name, type, lvl, icon, desc){
+    this.name = name;
+    this.type = type;
+    this.lvl = lvl;
+    this.icon = icon;
+    this.desc = desc;
+}
+function WeaponPProjectileB(name, type, lvl, icon, desc, dmg, interval, spd, clr){
+    Weapon.call(this, name, type, lvl, icon, desc);
+    this.dmg = dmg;
+    this.interval = interval;
+    this.spd = spd;
+    this.clr = clr;
+}
+function WeaponPProjectileSP(name, type, lvl, icon, desc, dmg, interval, spd, sprite, width, height){
+    WeaponPProjectileB.call(this, name, type, lvl, icon, desc, dmg, interval, spd);
+    this.sprite = sprite;
+    this.spriteWidth = width;
+    this.spriteHeight = height;
+}
+function WeaponPBeam(name, type, lvl, icon, desc, tickDmg, tickInterval){
+    Weapon.call(this, name, type, lvl, icon);
+    this.tickDmg = tickDmg;
+    this.tickInterval = tickInterval;
+}
+function WeaponS(name, type, lvl, icon, desc){
+    Weapon.call(this, name, type, lvl, icon, desc);
+    this.coolDown;
 }
 
 
@@ -445,13 +539,13 @@ function ProfileMenu(){
     this.rectLoadBtn = [200*sizeManager.factor, 650*sizeManager.factor, 200*sizeManager.factor, 100*sizeManager.factor];
     this.rectArray = [this.rect1, this.rect2, this.rect3];
     this.manageClick = function(){
-        if(ui.targetCollision(null, null, null, null, this.rect1)){ this.selectedProfile = 0; }
-        if(ui.targetCollision(null, null, null, null, this.rect2)){ this.selectedProfile = 1; }
-        if(ui.targetCollision(null, null, null, null, this.rect3)){ this.selectedProfile = 2; }
-        if(ui.targetCollision(null, null, null, null, this.rect1X) || 
-           ui.targetCollision(null, null, null, null, this.rect2X) || 
-           ui.targetCollision(null, null, null, null, this.rect3X) ){ this.deleteProfile(); }
-        if(ui.targetCollision(null, null, null, null, this.rectLoadBtn)){ this.loadProfile(); }
+        if(ui.targetCollision(this.rect1)){ this.selectedProfile = 0; }
+        if(ui.targetCollision(this.rect2)){ this.selectedProfile = 1; }
+        if(ui.targetCollision(this.rect3)){ this.selectedProfile = 2; }
+        if(ui.targetCollision(this.rect1X) || 
+           ui.targetCollision(this.rect2X) || 
+           ui.targetCollision(this.rect3X) ){ this.deleteProfile(); }
+        if(ui.targetCollision(this.rectLoadBtn)){ this.loadProfile(); }
         
         if(!profileManager.profileArray[this.selectedProfile]){
             //SHOW TEXT INPUT
@@ -496,20 +590,20 @@ function drawProfileMenu(){
         textY += 125*sizeManager.factor;
     }
     //CHECK MOUSE TARGET COLLISIONS
-    if(ui.targetCollision(null, null, null, null, profileMenu.rect1) ||
-           ui.targetCollision(null, null, null, null, profileMenu.rect2)||
-           ui.targetCollision(null, null, null, null, profileMenu.rect3) ||
-           ui.targetCollision(null, null, null, null, profileMenu.rectLoadBtn)){
+    if(ui.targetCollision(profileMenu.rect1) ||
+           ui.targetCollision(profileMenu.rect2)||
+           ui.targetCollision(profileMenu.rect3) ||
+           ui.targetCollision(profileMenu.rectLoadBtn)){
        canvas.style.cursor = "pointer";
        ctx.lineWidth = 2;
        ctx.strokeStyle = "red";
-       if(ui.targetCollision(null, null, null, null, profileMenu.rect1X)){
+       if(ui.targetCollision(profileMenu.rect1X)){
             ctx.strokeRect(profileMenu.rect1X[0], profileMenu.rect1X[1], profileMenu.rect1X[2], profileMenu.rect1X[3]);
         }
-       if(ui.targetCollision(null, null, null, null, profileMenu.rect2X)){
+       if(ui.targetCollision(profileMenu.rect2X)){
             ctx.strokeRect(profileMenu.rect2X[0], profileMenu.rect2X[1], profileMenu.rect2X[2], profileMenu.rect2X[3]);
         }
-       if(ui.targetCollision(null, null, null, null, profileMenu.rect3X)){
+       if(ui.targetCollision(profileMenu.rect3X)){
             ctx.strokeRect(profileMenu.rect3X[0], profileMenu.rect3X[1], profileMenu.rect3X[2], profileMenu.rect3X[3]);
         }
     }
@@ -524,8 +618,11 @@ function MainMenu(){
     this.rectPlayBtn = [200*sizeManager.factor, 650*sizeManager.factor, 200*sizeManager.factor, 100*sizeManager.factor];
     this.rectInventoryBtn = [425*sizeManager.factor, 650*sizeManager.factor, 150*sizeManager.factor, 100*sizeManager.factor];
     this.manageClick = function(){
-        if(ui.targetCollision(null, null, null, null, mainMenu.rectSettingsBtn)){
+        if(ui.targetCollision(this.rectSettingsBtn)){
             gameManager.changeGameState(4);
+        }
+        if(ui.targetCollision(this.rectInventoryBtn)){
+            gameManager.changeGameState(5);
         }
     };
 }
@@ -533,9 +630,9 @@ function MainMenu(){
 function drawMainMenu(){
     ctx.drawImage(mainMenu.bg, 0, 0, canvas.width, canvas.height);
     //CHECK MOUSE TARGET COLLISIONS
-    if(ui.targetCollision(null, null, null, null, mainMenu.rectSettingsBtn) || 
-       ui.targetCollision(null, null, null, null, mainMenu.rectPlayBtn) ||
-       ui.targetCollision(null, null, null, null, mainMenu.rectInventoryBtn) ){
+    if(ui.targetCollision(mainMenu.rectSettingsBtn) || 
+       ui.targetCollision(mainMenu.rectPlayBtn) ||
+       ui.targetCollision(mainMenu.rectInventoryBtn) ){
         canvas.style.cursor = "pointer";
     }
     else{ canvas.style.cursor = "default"; }
@@ -556,10 +653,10 @@ function SettingsMenu(){
     this.line1 = [125*sizeManager.factor, 175*sizeManager.factor, 175*sizeManager.factor, 125*sizeManager.factor];
     this.line2 = [125*sizeManager.factor, 275*sizeManager.factor, 175*sizeManager.factor, 225*sizeManager.factor];
     this.manageClick = function(){
-        if(ui.targetCollision(null, null, null, null, settingsMenu.rectMusicSwitch)){ settings.toggleMusic(); }
-        if(ui.targetCollision(null, null, null, null, settingsMenu.rectFxSwitch)){ settings.toggleFx(); }
-        if(ui.targetCollision(null, null, null, null, settingsMenu.rectCtrlSwitch)){ settings.toggleMouseControl(); }
-        if(ui.targetCollision(null, null, null, null, settingsMenu.rectBackBtn)){
+        if(ui.targetCollision(this.rectMusicSwitch)){ settings.toggleMusic(); }
+        if(ui.targetCollision(this.rectFxSwitch)){ settings.toggleFx(); }
+        if(ui.targetCollision(this.rectCtrlSwitch)){ settings.toggleMouseControl(); }
+        if(ui.targetCollision(this.rectBackBtn)){
             gameManager.changeGameState(3);
         }
     };
@@ -592,13 +689,137 @@ function drawSettingsMenu(){
         ctxTool.circle(settingsMenu.circle3BX, settingsMenu.circle3[1], settingsMenu.circle3[2], ctxTool.clrGrey);
     }
     //CHECK MOUSE TARGET COLLISIONS
-    if(ui.targetCollision(null, null, null, null, settingsMenu.rectMusicSwitch) || 
-       ui.targetCollision(null, null, null, null, settingsMenu.rectFxSwitch) ||
-       ui.targetCollision(null, null, null, null, settingsMenu.rectCtrlSwitch) ||
-       ui.targetCollision(null, null, null, null, settingsMenu.rectBackBtn) ){
+    if(ui.targetCollision(settingsMenu.rectMusicSwitch) || 
+       ui.targetCollision(settingsMenu.rectFxSwitch) ||
+       ui.targetCollision(settingsMenu.rectCtrlSwitch) ||
+       ui.targetCollision(settingsMenu.rectBackBtn) ){
         canvas.style.cursor = "pointer";
     }
     else{ canvas.style.cursor = "default"; }
+}
+
+//INVENTORY MENU
+function InventoryMenu(){
+    this.bgP;
+    this.bgS;
+    this.bgShop;
+    this.tab = 1;
+    this.selection = null;
+    this.shopWindow = false;
+    this.rectTab0 = [50*sizeManager.factor, 75*sizeManager.factor, 500*sizeManager.factor, 50*sizeManager.factor];
+    this.rectTab1 = [50*sizeManager.factor, 75*sizeManager.factor, 250*sizeManager.factor, 50*sizeManager.factor];
+    this.rectTab2 = [300*sizeManager.factor, 75*sizeManager.factor, 250*sizeManager.factor, 50*sizeManager.factor];
+    this.rectMain = [90*sizeManager.factor, 154*sizeManager.factor, 420*sizeManager.factor, 212*sizeManager.factor];
+    this.rectBtn = [100*sizeManager.factor, 544*sizeManager.factor, 108*sizeManager.factor, 40*sizeManager.factor];
+    this.rectBtnTxt = [154*sizeManager.factor, 570*sizeManager.factor];
+    this.rectBack = [445*sizeManager.factor, 675*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor];
+    this.rectItmX = [94*sizeManager.factor, 198*sizeManager.factor, 302*sizeManager.factor, 406*sizeManager.factor,
+                     94*sizeManager.factor, 198*sizeManager.factor, 302*sizeManager.factor, 406*sizeManager.factor];
+    this.rectItmY = [158*sizeManager.factor, 158*sizeManager.factor, 158*sizeManager.factor, 158*sizeManager.factor,
+                     262*sizeManager.factor, 262*sizeManager.factor, 262*sizeManager.factor, 262*sizeManager.factor];
+    this.rectItmW = 100*sizeManager.factor;
+    this.rectInfo = [104*sizeManager.factor, 424*sizeManager.factor];
+    this.rectTxtX = 220*sizeManager.factor;
+    this.rectTxtY = [434*sizeManager.factor, 460*sizeManager.factor, 485*sizeManager.factor, 510*sizeManager.factor];
+    this.manageClick = function(){
+        //CHECK SHOP WINDOW
+        if(this.shopWindow){
+            
+        }
+        else{
+            if(ui.targetCollision(this.rectTab1)){ this.tab = 1; this.selection = null; }
+            if(ui.targetCollision(this.rectTab2)){ this.tab = 2; this.selection = null;}
+            if(ui.targetCollision(this.rectBack)){ gameManager.changeGameState(3); }
+            for(var i = 0 ; i < 8 ; i++){
+                if(ui.targetCollision([this.rectItmX[i], this.rectItmY[i], this.rectItmW, this.rectItmW])){
+                    this.selection = i;
+                }
+            }
+            if(ui.targetCollision(this.rectBtn)){
+                if(this.tab === 1){
+                    if(avatar.inventoryP[this.selection] === 0){
+                        console.log("buy");
+                    }
+                    else{
+                        console.log("upgrade");
+                    }
+                }
+                else{
+
+                }
+            }
+        }
+    };
+}
+//INVENTORY MENY ANIMATION
+function drawInventoryMenu(){
+    //CHECK SHOP WINDOW
+    if(inventoryMenu.shopWindow){
+        //ctx.drawImage();
+    }
+    else{
+        //CHECK TAB
+        if(inventoryMenu.tab === 1){
+            ctx.drawImage(inventoryMenu.bgP, 0, 0, canvas.width, canvas.height);
+            //WEAPON ICONS
+            for(var i = 0 ; i < 8 ; i++){
+                if(weaponManager.weaponArrayP[i]){
+                    ctx.drawImage(weaponManager.weaponArrayP[i].icon, inventoryMenu.rectItmX[i], 
+                    inventoryMenu.rectItmY[i], inventoryMenu.rectItmW, inventoryMenu.rectItmW);
+                }
+            }
+            //SELECTED WEAPON INFO
+            if(inventoryMenu.selection !== null){
+                var weapon = weaponManager.weaponArrayP[inventoryMenu.selection];
+                if(weapon){
+                    weapon.lvl = avatar.inventoryP[inventoryMenu.selection];
+                    var btnTxt = "UPGRADE";
+                    if(weapon.lvl <= 0){ btnTxt = "BUY"; weapon.lvl = 1; }
+                    //BUY/UPGRADE BTN
+                    ctxTool.text(btnTxt, inventoryMenu.rectBtnTxt[0], inventoryMenu.rectBtnTxt[1], "center", ctxTool.clrRed);
+                    //ICON
+                    ctx.drawImage(weapon.icon, inventoryMenu.rectInfo[0], 
+                    inventoryMenu.rectInfo[1], inventoryMenu.rectItmW, inventoryMenu.rectItmW);
+                    //NAME
+                    ctxTool.text(weapon.name, inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[0], 
+                    "left", sizeManager.fontSizeS, ctxTool.clrRed);
+                    switch(weapon.type){
+                        case weaponType.PROJECTILE_BASIC:
+                        case weaponType.PROJECTILE_SP:
+                            //DMG
+                            ctxTool.text("Damage: " + weapon.dmg[weapon.lvl], inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[1], 
+                            "left", sizeManager.fontSizeXS, ctxTool.clrRed);
+                            //SPD
+                            ctxTool.text("Rate: " + (1000/weapon.interval[weapon.lvl]).toFixed(2) + "/s", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[2], 
+                            "left", sizeManager.fontSizeXS, ctxTool.clrRed);
+                            break;
+                        case weaponType.BEAM:
+                            //TICK DMG
+                            ctxTool.text("Tick Damage: " + weapon.tickDmg[weapon.lvl], inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[1], 
+                            "left", sizeManager.fontSizeXS, ctxTool.clrRed);
+                            //TICK
+                            ctxTool.text("Tick: " + (1000/weapon.tickInterval[weapon.lvl]).toFixed(2) + "ms", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[2], 
+                            "left", sizeManager.fontSizeXS, ctxTool.clrRed);
+                            break;
+                    }
+                    //ctxTool.text("" + weapon.desc + "", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[3],"left", sizeManager.fontSizeXS, ctxTool.clrRed);
+                }
+            }
+        }
+        else{
+            ctx.drawImage(inventoryMenu.bgS, 0, 0, canvas.width, canvas.height);
+        }
+        //CHECK MOUSE TARGET COLLISIONS
+        if(ui.targetCollision(inventoryMenu.rectTab0) ||
+           ui.targetCollision(inventoryMenu.rectMain) ||
+           ui.targetCollision(inventoryMenu.rectBtn) ||
+           ui.targetCollision(inventoryMenu.rectBack) ){
+            canvas.style.cursor = "pointer";
+        }
+        else{
+            canvas.style.cursor = "default";
+        }
+    }
 }
 
 //DRAWING TOOLS
@@ -620,6 +841,12 @@ function CtxTool(){
         ctx.lineTo(tx,ty);
         ctx.closePath();
         ctx.stroke();
+    };
+    this.text = function(text, x, y, align, size, clr){
+        ctx.font = size + "px Courier";
+        ctx.textAlign = align;
+        ctx.fillStyle = clr;
+        ctx.fillText(text, x, y);
     };
 }
 
@@ -710,6 +937,7 @@ function UI(){
                 settingsMenu.manageClick();
                 break;
             case 5:
+                inventoryMenu.manageClick();
                 break;
         }
     };
@@ -718,7 +946,8 @@ function UI(){
     this.touchScreen = false;
     
     //CHECK FOR TARGET
-    this.targetCollision = function(objX, objY, objW, objH, array){
+    this.targetCollision = function(array){
+        var objX, objY, objW, objH;
         if(array){
             objX = array[0];
             objY = array[1];
