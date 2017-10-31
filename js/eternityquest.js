@@ -70,8 +70,10 @@ function init(){
     inventoryMenu = new InventoryMenu();
     inventoryMenu.bgP = new Image();
     inventoryMenu.bgS = new Image();
+    inventoryMenu.bgShop = new Image();
     assetManager.addAsset(inventoryMenu.bgP, "img/eternityquest/bg-inventory-p.png");
     assetManager.addAsset(inventoryMenu.bgS, "img/eternityquest/bg-inventory-s.png");
+    assetManager.addAsset(inventoryMenu.bgShop, "img/eternityquest/bg-inventory-shop.png");
     
     weaponType = {
         PROJECTILE_BASIC: 0,
@@ -392,21 +394,24 @@ function WeaponManager(){
     this.initWeapons = function(){
         this.weaponArrayP = [
             new WeaponPProjectileB("Blaster", weaponType.PROJECTILE_BASIC, 0,
-                this.icon.blaster, "Standard issue 25 kilowatt plasma blaster",
-                [0, 5, 10, 15, 20, 25],
-                [0, 100, 90, 80, 70, 60],
-                10, "red"
+                this.icon.blaster, 
+                [0, 300, 500, 750, 1000, 1500], //COST
+                [0, 5, 10, 15, 20, 25], //DMG
+                [0, 100, 90, 80, 70, 60], //INTERVAL
+                10, "red" //SPD // CLR
             ),
             new WeaponPProjectileSP("Fireball", weaponType.PROJECTILE_SP, 0,
-                this.icon.fireball, "Destroy your enemies with balls of fire.",
-                [0, 25, 35, 55, 75, 100],
-                [0, 200, 190, 180, 175, 150],
-                10, this.sprites.fireball, 30, 50
+                this.icon.fireball, 
+                [500, 500, 750, 1000, 1300, 1800], //COST
+                [0, 25, 35, 55, 75, 100], //DMG
+                [0, 200, 190, 180, 175, 150], //INTERVAL
+                10, this.sprites.fireball, 30, 50 //SPD //SPRITE //WIDTH //HEIGHT
             ),
             new WeaponPBeam("Laser", weaponType.BEAM, 0,
-                this.icon.laser, "Long range sustained photon beam weapon.",
-                [0, 5, 10, 15, 20, 25],
-                [0, 120, 110, 100, 90, 80]
+                this.icon.laser, 
+                [1500, 800, 1200, 1700, 2300, 3000], //COST
+                [0, 5, 10, 15, 20, 25], //TICK DMG
+                [0, 120, 110, 100, 90, 80] //INTERVAL
             )
         ];
         this.weaponArrayS = [
@@ -414,33 +419,34 @@ function WeaponManager(){
         ];
     };
 }
-function Weapon(name, type, lvl, icon, desc){
+function Weapon(name, type, lvl, icon, cost){
     this.name = name;
     this.type = type;
     this.lvl = lvl;
     this.icon = icon;
-    this.desc = desc;
+    this.cost = cost;
+    this.maxLvl = 5;
 }
-function WeaponPProjectileB(name, type, lvl, icon, desc, dmg, interval, spd, clr){
-    Weapon.call(this, name, type, lvl, icon, desc);
+function WeaponPProjectileB(name, type, lvl, icon, cost, dmg, interval, spd, clr){
+    Weapon.call(this, name, type, lvl, icon, cost);
     this.dmg = dmg;
     this.interval = interval;
     this.spd = spd;
     this.clr = clr;
 }
-function WeaponPProjectileSP(name, type, lvl, icon, desc, dmg, interval, spd, sprite, width, height){
-    WeaponPProjectileB.call(this, name, type, lvl, icon, desc, dmg, interval, spd);
+function WeaponPProjectileSP(name, type, lvl, icon, cost, dmg, interval, spd, sprite, width, height){
+    WeaponPProjectileB.call(this, name, type, lvl, icon, cost, dmg, interval, spd);
     this.sprite = sprite;
     this.spriteWidth = width;
     this.spriteHeight = height;
 }
-function WeaponPBeam(name, type, lvl, icon, desc, tickDmg, tickInterval){
-    Weapon.call(this, name, type, lvl, icon);
+function WeaponPBeam(name, type, lvl, icon, cost, tickDmg, tickInterval){
+    Weapon.call(this, name, type, lvl, icon, cost);
     this.tickDmg = tickDmg;
     this.tickInterval = tickInterval;
 }
-function WeaponS(name, type, lvl, icon, desc){
-    Weapon.call(this, name, type, lvl, icon, desc);
+function WeaponS(name, type, lvl, icon, cost){
+    Weapon.call(this, name, type, lvl, icon, cost);
     this.coolDown;
 }
 
@@ -720,11 +726,39 @@ function InventoryMenu(){
     this.rectItmW = 100*sizeManager.factor;
     this.rectInfo = [104*sizeManager.factor, 424*sizeManager.factor];
     this.rectTxtX = 220*sizeManager.factor;
-    this.rectTxtY = [434*sizeManager.factor, 460*sizeManager.factor, 485*sizeManager.factor, 510*sizeManager.factor];
+    this.rectTxtY = [434*sizeManager.factor, 460*sizeManager.factor, 485*sizeManager.factor, 510*sizeManager.factor, 535*sizeManager.factor];
+    this.rectShopBack = [425*sizeManager.factor, 175*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor];
+    this.rectShopIcon = [250*sizeManager.factor, 250*sizeManager.factor];
+    this.rectShopTxtX = 300*sizeManager.factor;
+    this.rectShopTxtY = [215*sizeManager.factor, 420*sizeManager.factor, 455*sizeManager.factor, 480*sizeManager.factor, 505*sizeManager.factor];
+    this.rectShopBtn = [246*sizeManager.factor, 580*sizeManager.factor, 108*sizeManager.factor, 40*sizeManager.factor];
+    this.rectShopBtnTxt = [300*sizeManager.factor, 605*sizeManager.factor];
+    this.shopEvent = function(){
+        var weapon;
+        if(this.tab === 1){
+            weapon = weaponManager.weaponArrayP[this.selection];
+            weapon.lvl = avatar.inventoryP[this.selection];
+            if(weapon.cost[weapon.lvl] < avatar.gold && weapon.lvl < weapon.maxLvl){
+                avatar.inventoryP[this.selection]++;
+                avatar.gold -= weapon.cost[weapon.lvl];
+                profileManager.updateProfile();
+            }
+        }
+        else{
+            weapon = weaponManager.weaponArrayS[this.selection];
+            weapon.lvl = avatar.inventoryS[this.selection];
+            if(weapon.cost[weapon.lvl] < avatar.gold && weapon.lvl < weapon.maxLvl){
+                avatar.inventoryS[this.selection]++;
+                avatar.gold -= weapon.cost[weapon.lvl];
+                profileManager.updateProfile();
+            }
+        }
+    };
     this.manageClick = function(){
         //CHECK SHOP WINDOW
         if(this.shopWindow){
-            
+            if(ui.targetCollision(this.rectShopBack)){ this.shopWindow = false; }
+            if(ui.targetCollision(this.rectShopBtn)){ this.shopEvent();}
         }
         else{
             if(ui.targetCollision(this.rectTab1)){ this.tab = 1; this.selection = null; }
@@ -736,79 +770,155 @@ function InventoryMenu(){
                 }
             }
             if(ui.targetCollision(this.rectBtn)){
-                if(this.tab === 1){
-                    if(avatar.inventoryP[this.selection] === 0){
-                        console.log("buy");
-                    }
-                    else{
-                        console.log("upgrade");
-                    }
-                }
-                else{
-
-                }
+                this.shopWindow = true;
             }
         }
     };
 }
 //INVENTORY MENY ANIMATION
 function drawInventoryMenu(){
-    //CHECK SHOP WINDOW
-    if(inventoryMenu.shopWindow){
-        //ctx.drawImage();
+    //CHECK TAB
+    if(inventoryMenu.tab === 1){
+        ctx.drawImage(inventoryMenu.bgP, 0, 0, canvas.width, canvas.height);
+        //WEAPON ICONS
+        for(var i = 0 ; i < 8 ; i++){
+            if(weaponManager.weaponArrayP[i]){
+                ctx.drawImage(weaponManager.weaponArrayP[i].icon, inventoryMenu.rectItmX[i], 
+                inventoryMenu.rectItmY[i], inventoryMenu.rectItmW, inventoryMenu.rectItmW);
+            }
+        }
+        //SELECTED WEAPON INFO
+        if(inventoryMenu.selection !== null){
+            var weapon = weaponManager.weaponArrayP[inventoryMenu.selection];
+            if(weapon){
+                weapon.lvl = avatar.inventoryP[inventoryMenu.selection];
+                ctxTool.text("Lvl: " + weapon.lvl, inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[1],
+                "left", sizeManager.fontSizeXS, ctxTool.clrRed);
+                var btnTxt = "UPGRADE";
+                if(weapon.lvl <= 0){ btnTxt = "BUY"; weapon.lvl = 1; }
+                //BUY/UPGRADE BTN
+                ctxTool.text(btnTxt, inventoryMenu.rectBtnTxt[0], inventoryMenu.rectBtnTxt[1], "center", ctxTool.clrRed);
+                //ICON
+                ctx.drawImage(weapon.icon, inventoryMenu.rectInfo[0], 
+                inventoryMenu.rectInfo[1], inventoryMenu.rectItmW, inventoryMenu.rectItmW);
+                //NAME
+                ctxTool.text(weapon.name, inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[0], 
+                "left", sizeManager.fontSizeS, ctxTool.clrRed);
+                switch(weapon.type){
+                    case weaponType.PROJECTILE_BASIC:
+                    case weaponType.PROJECTILE_SP:
+                        //DMG
+                        ctxTool.text("Damage: " + weapon.dmg[weapon.lvl], inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[2], 
+                        "left", sizeManager.fontSizeXS, ctxTool.clrRed);
+                        //SPD
+                        ctxTool.text("Rate: " + (1000/weapon.interval[weapon.lvl]).toFixed(2) + "/s", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[3], 
+                        "left", sizeManager.fontSizeXS, ctxTool.clrRed);
+                        break;
+                    case weaponType.BEAM:
+                        //TICK DMG
+                        ctxTool.text("Tick Damage: " + weapon.tickDmg[weapon.lvl], inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[2], 
+                        "left", sizeManager.fontSizeXS, ctxTool.clrRed);
+                        //TICK
+                        ctxTool.text("Tick: " + (1000/weapon.tickInterval[weapon.lvl]).toFixed(2) + "ms", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[3], 
+                        "left", sizeManager.fontSizeXS, ctxTool.clrRed);
+                        break;
+                }
+                //ctxTool.text("" + weapon.desc + "", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[3],"left", sizeManager.fontSizeXS, ctxTool.clrRed);
+            }
+        }
     }
     else{
+        ctx.drawImage(inventoryMenu.bgS, 0, 0, canvas.width, canvas.height);
+    }
+        
+    //CHECK SHOP WINDOW
+    if(inventoryMenu.shopWindow){
+        ctx.drawImage(inventoryMenu.bgShop, 0, 0, canvas.width, canvas.height);
         //CHECK TAB
         if(inventoryMenu.tab === 1){
-            ctx.drawImage(inventoryMenu.bgP, 0, 0, canvas.width, canvas.height);
-            //WEAPON ICONS
-            for(var i = 0 ; i < 8 ; i++){
-                if(weaponManager.weaponArrayP[i]){
-                    ctx.drawImage(weaponManager.weaponArrayP[i].icon, inventoryMenu.rectItmX[i], 
-                    inventoryMenu.rectItmY[i], inventoryMenu.rectItmW, inventoryMenu.rectItmW);
-                }
-            }
-            //SELECTED WEAPON INFO
-            if(inventoryMenu.selection !== null){
-                var weapon = weaponManager.weaponArrayP[inventoryMenu.selection];
-                if(weapon){
-                    weapon.lvl = avatar.inventoryP[inventoryMenu.selection];
-                    var btnTxt = "UPGRADE";
-                    if(weapon.lvl <= 0){ btnTxt = "BUY"; weapon.lvl = 1; }
-                    //BUY/UPGRADE BTN
-                    ctxTool.text(btnTxt, inventoryMenu.rectBtnTxt[0], inventoryMenu.rectBtnTxt[1], "center", ctxTool.clrRed);
-                    //ICON
-                    ctx.drawImage(weapon.icon, inventoryMenu.rectInfo[0], 
-                    inventoryMenu.rectInfo[1], inventoryMenu.rectItmW, inventoryMenu.rectItmW);
-                    //NAME
-                    ctxTool.text(weapon.name, inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[0], 
-                    "left", sizeManager.fontSizeS, ctxTool.clrRed);
+            var weapon = weaponManager.weaponArrayP[inventoryMenu.selection];
+            weapon.lvl = avatar.inventoryP[inventoryMenu.selection];
+            if(weapon){
+                //ICON
+                ctx.drawImage(weapon.icon, inventoryMenu.rectShopIcon[0], inventoryMenu.rectShopIcon[0], 
+                inventoryMenu.rectItmW, inventoryMenu.rectItmW);
+                //NAME
+                ctxTool.text(weapon.name, inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[0],
+                "center", sizeManager.fontSizeS, ctxTool.clrRed);
+                //COST
+                ctxTool.text(weapon.cost[weapon.lvl], inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[1],
+                "center", sizeManager.fontSizeS, ctxTool.clrBlack);
+                //LVL
+                ctxTool.text("Lvl: " + weapon.lvl, inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[2], 
+                "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                weapon.lvl = avatar.inventoryP[inventoryMenu.selection];
+                var btnTxt = "UPGRADE";
+                if(weapon.lvl <= 0){
+                    btnTxt = "BUY"; weapon.lvl = 1;
                     switch(weapon.type){
                         case weaponType.PROJECTILE_BASIC:
                         case weaponType.PROJECTILE_SP:
                             //DMG
-                            ctxTool.text("Damage: " + weapon.dmg[weapon.lvl], inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[1], 
+                            ctxTool.text("Damage: " + weapon.dmg[weapon.lvl], inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[3], 
+                            "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                            //SPD
+                            ctxTool.text("Rate: " + (1000/weapon.interval[weapon.lvl]).toFixed(2) + "/s", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
+                            "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                            break;
+                        case weaponType.BEAM:
+                            //TICK DMG
+                            ctxTool.text("Tick Damage: " + weapon.tickDmg[weapon.lvl], inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[3], 
+                            "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                            //TICK
+                            ctxTool.text("Tick: " + (1000/weapon.tickInterval[weapon.lvl]).toFixed(2) + "ms", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
+                            "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                            break;
+                    }
+                }
+                else{
+                    switch(weapon.type){
+                        case weaponType.PROJECTILE_BASIC:
+                        case weaponType.PROJECTILE_SP:
+                            //DMG
+                            ctxTool.text("Damage: " + weapon.dmg[weapon.lvl], inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[3], 
+                            "right", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                            ctxTool.text(" -> " + weapon.dmg[weapon.lvl+1], inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[3], 
                             "left", sizeManager.fontSizeXS, ctxTool.clrRed);
                             //SPD
-                            ctxTool.text("Rate: " + (1000/weapon.interval[weapon.lvl]).toFixed(2) + "/s", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[2], 
+                            ctxTool.text("Rate: " + (1000/weapon.interval[weapon.lvl]).toFixed(2) + "/s", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
+                            "right", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                            ctxTool.text(" -> " + (1000/weapon.interval[weapon.lvl+1]).toFixed(2) + "/s", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
                             "left", sizeManager.fontSizeXS, ctxTool.clrRed);
                             break;
                         case weaponType.BEAM:
                             //TICK DMG
-                            ctxTool.text("Tick Damage: " + weapon.tickDmg[weapon.lvl], inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[1], 
+                            ctxTool.text("Tick Damage: " + weapon.tickDmg[weapon.lvl], inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[3], 
+                            "right", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                            ctxTool.text(" -> " + weapon.tickDmg[weapon.lvl+1], inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[3], 
                             "left", sizeManager.fontSizeXS, ctxTool.clrRed);
                             //TICK
-                            ctxTool.text("Tick: " + (1000/weapon.tickInterval[weapon.lvl]).toFixed(2) + "ms", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[2], 
+                            ctxTool.text("Tick: " + (1000/weapon.tickInterval[weapon.lvl]).toFixed(2) + "ms", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
+                            "right", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                            ctxTool.text(" -> " + (1000/weapon.tickInterval[weapon.lvl+1]).toFixed(2) + "ms", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
                             "left", sizeManager.fontSizeXS, ctxTool.clrRed);
                             break;
                     }
-                    //ctxTool.text("" + weapon.desc + "", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[3],"left", sizeManager.fontSizeXS, ctxTool.clrRed);
                 }
+                //BTN TXT
+                ctxTool.text(btnTxt, inventoryMenu.rectShopBtnTxt[0], inventoryMenu.rectShopBtnTxt[1],
+                "center", sizeManager.fontSizeXS, ctxTool.clrRed);
             }
         }
-        else{
-            ctx.drawImage(inventoryMenu.bgS, 0, 0, canvas.width, canvas.height);
+        //CHECK MOUSE TARGET COLLISIONS
+        if(ui.targetCollision(inventoryMenu.rectShopBack) ||
+           ui.targetCollision(inventoryMenu.rectShopBtn) ) {
+            canvas.style.cursor = "pointer";
         }
+        else{
+            canvas.style.cursor = "default";
+        }
+    }
+    else{
         //CHECK MOUSE TARGET COLLISIONS
         if(ui.targetCollision(inventoryMenu.rectTab0) ||
            ui.targetCollision(inventoryMenu.rectMain) ||
@@ -824,6 +934,7 @@ function drawInventoryMenu(){
 
 //DRAWING TOOLS
 function CtxTool(){
+    this.clrBlack = "#000000";
     this.clrGrey = "#4a4a4a";
     this.clrRed = "#9c1919";
     this.circle = function(x,y,r,clr){
