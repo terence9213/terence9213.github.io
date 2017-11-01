@@ -71,9 +71,11 @@ function init(){
     inventoryMenu.bgP = new Image();
     inventoryMenu.bgS = new Image();
     inventoryMenu.bgShop = new Image();
+    inventoryMenu.btnLoadout = new Image();
     assetManager.addAsset(inventoryMenu.bgP, "img/eternityquest/bg-inventory-p.png");
     assetManager.addAsset(inventoryMenu.bgS, "img/eternityquest/bg-inventory-s.png");
     assetManager.addAsset(inventoryMenu.bgShop, "img/eternityquest/bg-inventory-shop.png");
+    assetManager.addAsset(inventoryMenu.btnLoadout, "img/eternityquest/btn-loadout.png");
     
     weaponType = {
         PROJECTILE_BASIC: 0,
@@ -353,12 +355,12 @@ function Avatar(){
     this.deathStartTime;
     
     this.activeWeaponIndex;
-    this.loadout = [];
+    this.loadout = [null, null, null];
     this.inventoryP = [];
     this.inventoryS = [];
     
     this.cycleWeapons = function(){
-        if(activeWeaponIndex < this.inventory.length){
+        if(activeWeaponIndex < 1){
             activeWeaponIndex++;
         }
         else{
@@ -709,9 +711,11 @@ function InventoryMenu(){
     this.bgP;
     this.bgS;
     this.bgShop;
+    this.btnLoadout;
     this.tab = 1;
     this.selection = null;
     this.shopWindow = false;
+    this.goldXY = [300*sizeManager.factor, 30*sizeManager.factor];
     this.rectTab0 = [50*sizeManager.factor, 75*sizeManager.factor, 500*sizeManager.factor, 50*sizeManager.factor];
     this.rectTab1 = [50*sizeManager.factor, 75*sizeManager.factor, 250*sizeManager.factor, 50*sizeManager.factor];
     this.rectTab2 = [300*sizeManager.factor, 75*sizeManager.factor, 250*sizeManager.factor, 50*sizeManager.factor];
@@ -727,6 +731,20 @@ function InventoryMenu(){
     this.rectInfo = [104*sizeManager.factor, 424*sizeManager.factor];
     this.rectTxtX = 220*sizeManager.factor;
     this.rectTxtY = [434*sizeManager.factor, 460*sizeManager.factor, 485*sizeManager.factor, 510*sizeManager.factor, 535*sizeManager.factor];
+    this.rectLoad = [104*sizeManager.factor, 630*sizeManager.factor, 308*sizeManager.factor, 100*sizeManager.factor];
+    this.rectLoadX = [104*sizeManager.factor, 208*sizeManager.factor, 312*sizeManager.factor];
+    this.rectLoadY = 630*sizeManager.factor;
+    this.rectLoadW = 100*sizeManager.factor;
+    this.rectLoadBtn1R = [114*sizeManager.factor, 635*sizeManager.factor, 80*sizeManager.factor, 30*sizeManager.factor];
+    this.rectLoadBtn2R = [218*sizeManager.factor, 635*sizeManager.factor, 80*sizeManager.factor, 30*sizeManager.factor];
+    this.rectLoadBtn3R = [322*sizeManager.factor, 635*sizeManager.factor, 80*sizeManager.factor, 30*sizeManager.factor];
+    this.rectLoadBtn1E = [114*sizeManager.factor, 695*sizeManager.factor, 80*sizeManager.factor, 30*sizeManager.factor];
+    this.rectLoadBtn2E = [218*sizeManager.factor, 695*sizeManager.factor, 80*sizeManager.factor, 30*sizeManager.factor];
+    this.rectLoadBtn3E = [322*sizeManager.factor, 695*sizeManager.factor, 80*sizeManager.factor, 30*sizeManager.factor];
+    this.rectLoadBtnX = [114*sizeManager.factor, 218*sizeManager.factor, 322*sizeManager.factor, 114*sizeManager.factor, 218*sizeManager.factor, 322*sizeManager.factor];
+    this.rectLoadBtnY = [635*sizeManager.factor, 635*sizeManager.factor, 635*sizeManager.factor, 695*sizeManager.factor, 695*sizeManager.factor, 695*sizeManager.factor];
+    this.rectLoadBtnWH = [80*sizeManager.factor, 30*sizeManager.factor];
+    
     this.rectShopBack = [425*sizeManager.factor, 175*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor];
     this.rectShopIcon = [250*sizeManager.factor, 250*sizeManager.factor];
     this.rectShopTxtX = 300*sizeManager.factor;
@@ -754,6 +772,36 @@ function InventoryMenu(){
             }
         }
     };
+    this.loadoutEvent = function(i){
+        if(this.tab === 1){
+            switch (i){
+                case 0:
+                case 1:
+                    avatar.loadout[i] = null;
+                    break;
+                case 3:
+                case 4:
+                    if(avatar.inventoryP[this.selection] > 0){
+                        avatar.loadout[i-3] = weaponManager.weaponArrayP[this.selection];
+                        avatar.loadout[i-3].lvl = avatar.inventoryP[this.selection];
+                    }
+                    break;
+            }
+        }
+        else{
+            switch (i){
+                case 2:
+                    avatar.loadout[i] = null;
+                    break;
+                case 5:
+                    if(avatar.inventoryS[this.selection] > 0){
+                        avatar.loadout[i-3] = weaponManager.weaponArrayS[this.selection];
+                        avatar.loadout[i-3].lvl = avatar.inventoryS[this.selection];
+                    }
+                    break;
+            }
+        }
+    };
     this.manageClick = function(){
         //CHECK SHOP WINDOW
         if(this.shopWindow){
@@ -771,6 +819,11 @@ function InventoryMenu(){
             }
             if(ui.targetCollision(this.rectBtn)){
                 this.shopWindow = true;
+            }
+            for(var i = 0 ; i < 6 ; i++){
+                if(ui.targetCollision([this.rectLoadBtnX[i], this.rectLoadBtnY[i], this.rectLoadBtnWH[0], this.rectLoadBtnWH[1]])){
+                    this.loadoutEvent(i);
+                }
             }
         }
     };
@@ -819,17 +872,28 @@ function drawInventoryMenu(){
                         ctxTool.text("Tick Damage: " + weapon.tickDmg[weapon.lvl], inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[2], 
                         "left", sizeManager.fontSizeXS, ctxTool.clrRed);
                         //TICK
-                        ctxTool.text("Tick: " + (1000/weapon.tickInterval[weapon.lvl]).toFixed(2) + "ms", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[3], 
+                        ctxTool.text("Tick: " + weapon.tickInterval[weapon.lvl] + "ms", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[3], 
                         "left", sizeManager.fontSizeXS, ctxTool.clrRed);
                         break;
                 }
                 //ctxTool.text("" + weapon.desc + "", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[3],"left", sizeManager.fontSizeXS, ctxTool.clrRed);
             }
         }
+        //LOADOUT
+        for(var i = 0 ; i < avatar.loadout.length ; i++){
+            var weapon = avatar.loadout[i];
+            if(weapon){
+                ctx.drawImage(weapon.icon, inventoryMenu.rectLoadX[i], inventoryMenu.rectLoadY, 
+                inventoryMenu.rectLoadW, inventoryMenu.rectLoadW);
+            }
+        }
     }
     else{
         ctx.drawImage(inventoryMenu.bgS, 0, 0, canvas.width, canvas.height);
     }
+    //GOLD
+    ctxTool.text("Gold: " + avatar.gold, inventoryMenu.goldXY[0], inventoryMenu.goldXY[1], 
+    "center", sizeManager.fontSizeS, ctxTool.clrRed);
         
     //CHECK SHOP WINDOW
     if(inventoryMenu.shopWindow){
@@ -837,8 +901,8 @@ function drawInventoryMenu(){
         //CHECK TAB
         if(inventoryMenu.tab === 1){
             var weapon = weaponManager.weaponArrayP[inventoryMenu.selection];
-            weapon.lvl = avatar.inventoryP[inventoryMenu.selection];
             if(weapon){
+                weapon.lvl = avatar.inventoryP[inventoryMenu.selection];
                 //ICON
                 ctx.drawImage(weapon.icon, inventoryMenu.rectShopIcon[0], inventoryMenu.rectShopIcon[0], 
                 inventoryMenu.rectItmW, inventoryMenu.rectItmW);
@@ -870,7 +934,7 @@ function drawInventoryMenu(){
                             ctxTool.text("Tick Damage: " + weapon.tickDmg[weapon.lvl], inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[3], 
                             "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
                             //TICK
-                            ctxTool.text("Tick: " + (1000/weapon.tickInterval[weapon.lvl]).toFixed(2) + "ms", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
+                            ctxTool.text("Tick: " + weapon.tickInterval[weapon.lvl] + "ms", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
                             "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
                             break;
                     }
@@ -897,9 +961,9 @@ function drawInventoryMenu(){
                             ctxTool.text(" -> " + weapon.tickDmg[weapon.lvl+1], inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[3], 
                             "left", sizeManager.fontSizeXS, ctxTool.clrRed);
                             //TICK
-                            ctxTool.text("Tick: " + (1000/weapon.tickInterval[weapon.lvl]).toFixed(2) + "ms", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
+                            ctxTool.text("Tick: " + weapon.tickInterval[weapon.lvl] + "ms", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
                             "right", sizeManager.fontSizeXS, ctxTool.clrBlack);
-                            ctxTool.text(" -> " + (1000/weapon.tickInterval[weapon.lvl+1]).toFixed(2) + "ms", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
+                            ctxTool.text(" -> " + weapon.tickInterval[weapon.lvl+1] + "ms", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
                             "left", sizeManager.fontSizeXS, ctxTool.clrRed);
                             break;
                     }
@@ -920,9 +984,27 @@ function drawInventoryMenu(){
     }
     else{
         //CHECK MOUSE TARGET COLLISIONS
+        if(ui.targetCollision(inventoryMenu.rectLoad)){
+            if(inventoryMenu.tab === 1){
+                ctx.drawImage(inventoryMenu.btnLoadout, inventoryMenu.rectLoadX[0], inventoryMenu.rectLoadY,
+                inventoryMenu.rectLoadW, inventoryMenu.rectLoadW);
+                ctx.drawImage(inventoryMenu.btnLoadout, inventoryMenu.rectLoadX[1], inventoryMenu.rectLoadY,
+                inventoryMenu.rectLoadW, inventoryMenu.rectLoadW);
+            }
+            else{
+                ctx.drawImage(inventoryMenu.btnLoadout, inventoryMenu.rectLoadX[2], inventoryMenu.rectLoadY,
+                inventoryMenu.rectLoadW, inventoryMenu.rectLoadW);
+            }
+        }
         if(ui.targetCollision(inventoryMenu.rectTab0) ||
            ui.targetCollision(inventoryMenu.rectMain) ||
            ui.targetCollision(inventoryMenu.rectBtn) ||
+           ui.targetCollision(inventoryMenu.rectLoadBtn1R) ||
+           ui.targetCollision(inventoryMenu.rectLoadBtn2R) ||
+           ui.targetCollision(inventoryMenu.rectLoadBtn3R) ||
+           ui.targetCollision(inventoryMenu.rectLoadBtn1E) ||
+           ui.targetCollision(inventoryMenu.rectLoadBtn2E) ||
+           ui.targetCollision(inventoryMenu.rectLoadBtn3E) ||
            ui.targetCollision(inventoryMenu.rectBack) ){
             canvas.style.cursor = "pointer";
         }
