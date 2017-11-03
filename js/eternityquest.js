@@ -30,6 +30,8 @@ var inventoryMenu;
 var weaponManager;
 var weaponType;
 
+var gameUI;
+
 var ctxTool;
 var ui;
 var avatar;
@@ -61,7 +63,9 @@ function init(){
     
     mainMenu = new MainMenu();
     mainMenu.bg = new Image();
+    mainMenu.bgWarn = new Image();
     assetManager.addAsset(mainMenu.bg, "img/eternityquest/bg-menu.png");
+    assetManager.addAsset(mainMenu.bgWarn, "img/eternityquest/bg-menu-warn.png");
     
     settingsMenu = new SettingsMenu();
     settingsMenu.bg = new Image();
@@ -97,6 +101,11 @@ function init(){
     avatar = new Avatar();
     avatar.sprite = new Image();
     assetManager.addAsset(avatar.sprite, "img/eternityquest/avatar.png");
+    
+    //GAME
+    gameUI = new GameUI();
+    gameUI.bg = new Image();
+    assetManager.addAsset(gameUI.bg, "img/eternityquest/bg-game.png");
     
     //LOAD ASSETS
     assetManager.loadAll();
@@ -354,23 +363,35 @@ function Avatar(){
     this.deathDuration;
     this.deathStartTime;
     
-    this.activeWeaponIndex;
+    this.activeWeaponIndex = 0;
     this.loadout = [null, null, null];
     this.inventoryP = [];
     this.inventoryS = [];
     
     this.cycleWeapons = function(){
-        if(activeWeaponIndex < 1){
-            activeWeaponIndex++;
+        if(this.activeWeaponIndex < 1){
+            this.activeWeaponIndex++;
         }
         else{
-            activeWeaponIndex = 0;
+            this.activeWeaponIndex = 0;
+        }
+    };
+    this.checkLoadout = function(){
+        for(var i = 0 ; i < this.loadout.length ; i++){
+            if(this.loadout[i]){ return true; }
+            else{ return false; }
         }
     };
     
     this.init = function(){
         this.width = sizeManager.spriteWidth;
         this.height = sizeManager.spriteHeight;
+        this.score = 0;
+        this.x = 275*sizeManager.factor;
+        this.y = 650*sizeManager.factor;
+        this.ms = 8*sizeManager.factor;
+        this.msX = 8*sizeManager.factor;
+        this.msY = 8*sizeManager.factor;
     };
     this.load = function(){
         this.name = profile.name;
@@ -452,6 +473,13 @@ function WeaponS(name, type, lvl, icon, cost){
     this.coolDown;
 }
 
+//ENEMY MANAGER
+function EnemyManager(){
+    this.enemyArray = [];
+}
+function Enemy(){
+    
+}
 
 //   --- === [ ANIMATIONS ] === ---
 function draw(){
@@ -622,28 +650,46 @@ function drawProfileMenu(){
 //MAIN MENU
 function MainMenu(){
     this.bg;
+    this.bgWarn;
+    this.window = false;
     this.rectSettingsBtn = [25*sizeManager.factor, 650*sizeManager.factor, 150*sizeManager.factor, 100*sizeManager.factor];
     this.rectPlayBtn = [200*sizeManager.factor, 650*sizeManager.factor, 200*sizeManager.factor, 100*sizeManager.factor];
     this.rectInventoryBtn = [425*sizeManager.factor, 650*sizeManager.factor, 150*sizeManager.factor, 100*sizeManager.factor];
+    this.rectWarnBack = [425*sizeManager.factor, 175*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor];
+    this.rectWarnBtn = [246*sizeManager.factor, 580*sizeManager.factor, 108*sizeManager.factor, 40*sizeManager.factor];
     this.manageClick = function(){
-        if(ui.targetCollision(this.rectSettingsBtn)){
-            gameManager.changeGameState(4);
+        if(ui.targetCollision(this.rectSettingsBtn)){gameManager.changeGameState(4);}
+        if(ui.targetCollision(this.rectInventoryBtn)){gameManager.changeGameState(5);}
+        if(ui.targetCollision(this.rectPlayBtn)){
+            if(avatar.checkLoadout()){ gameManager.changeGameState(6); }
+            else{ this.window = true; }
         }
-        if(ui.targetCollision(this.rectInventoryBtn)){
-            gameManager.changeGameState(5);
-        }
+        if(ui.targetCollision(this.rectWarnBack)){ this.window = false; }
+        if(ui.targetCollision(this.rectWarnBtn)){ gameManager.changeGameState(6); }
     };
 }
 //MAIN MENU ANIMATION
 function drawMainMenu(){
     ctx.drawImage(mainMenu.bg, 0, 0, canvas.width, canvas.height);
-    //CHECK MOUSE TARGET COLLISIONS
-    if(ui.targetCollision(mainMenu.rectSettingsBtn) || 
-       ui.targetCollision(mainMenu.rectPlayBtn) ||
-       ui.targetCollision(mainMenu.rectInventoryBtn) ){
-        canvas.style.cursor = "pointer";
+    //CHECK WARNING WINDOW
+    if(mainMenu.window){
+        ctx.drawImage(mainMenu.bgWarn, 0, 0, canvas.width, canvas.height);
+        //CHECK MOUSE TARGET COLLISIONS
+        if(ui.targetCollision(mainMenu.rectWarnBack) ||
+           ui.targetCollision(mainMenu.rectWarnBtn)){
+            canvas.style.cursor = "pointer";
+        }
+        else{ canvas.style.cursor = "default"; }
     }
-    else{ canvas.style.cursor = "default"; }
+    else{
+        //CHECK MOUSE TARGET COLLISIONS
+        if(ui.targetCollision(mainMenu.rectSettingsBtn) || 
+           ui.targetCollision(mainMenu.rectPlayBtn) ||
+           ui.targetCollision(mainMenu.rectInventoryBtn) ){
+            canvas.style.cursor = "pointer";
+        }
+        else{ canvas.style.cursor = "default"; }
+    }
 }
 
 //SETTINGS MENU
@@ -1014,49 +1060,77 @@ function drawInventoryMenu(){
     }
 }
 
-//DRAWING TOOLS
-function CtxTool(){
-    this.clrBlack = "#000000";
-    this.clrGrey = "#4a4a4a";
-    this.clrRed = "#9c1919";
-    this.circle = function(x,y,r,clr){
-        ctx.beginPath();
-        ctx.fillStyle = clr;
-        ctx.arc(x, y, r, 0, Math.PI*2, false);
-        ctx.fill();
-        ctx.closePath();
-    };
-    this.line = function(ox,oy,tx,ty,w,clr){
-        ctx.beginPath();
-        ctx.lineWidth = w;
-        ctx.strokeStyle = clr;
-        ctx.moveTo(ox,oy);
-        ctx.lineTo(tx,ty);
-        ctx.closePath();
-        ctx.stroke();
-    };
-    this.text = function(text, x, y, align, size, clr){
-        ctx.font = size + "px Courier";
-        ctx.textAlign = align;
-        ctx.fillStyle = clr;
-        ctx.fillText(text, x, y);
-    };
-}
-
-//UI
-function UI(){
-    //GAME FUCNTION
+// --- === GAME === ---
+//GAME UI
+function GameUI(){
+    this.bg;
+    this.score = 0;
+    this.gameAreaYTop = 80*sizeManager.factor;
+    this.gameAreaYBtm = 80*sizeManager.factor + canvas.height - (160*sizeManager.factor);
+    
+    //AVATAR MOVMENT
     this.up = false;
     this.down = false;
     this.left = false;
     this.right = false;
-    this.fire = false;;
+    this.fire = false;
+    this.fireS = false;
     
-    //MOUSE / TOUCH TARGET
-    this.targetX;
-    this.targetY;
+    this.drawInventory = function(){
+        //Primary
+        if(avatar.loadout[0]){ ctx.drawImage(avatar.loadout[0].icon, 50*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor); }
+        if(avatar.loadout[1]){ ctx.drawImage(avatar.loadout[1].icon, 200*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor); }
+        //Secondary
+        if(avatar.loadout[2]){ ctx.drawImage(avatar.loadout[2].icon, 425*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor); }
+        //Selection
+        if(avatar.activeWeaponIndex === 0){ ctxTool.strokeRect(50*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor, 2*sizeManager.factor, ctxTool.clrRed); }
+        if(avatar.activeWeaponIndex === 1){ ctxTool.strokeRect(200*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor, 2*sizeManager.factor, ctxTool.clrRed); }
+    };
+    this.drawScore = function(){
+        ctxTool.text(avatar.score, 300*sizeManager.factor, 50*sizeManager.factor, sizeManager.fontSizeS, "center", ctxTool.clrRed);
+    };
+    this.drawAvatar = function(){
+        if(settings.mouseControl){
+            //MOUSE POSITION
+            if(ui.avatarTargetY < avatar.y){ this.up    = true; } else { this.up    = false; }
+            if(ui.avatarTargetY > avatar.y){ this.down  = true; } else { this.down  = false; }
+            if(ui.avatarTargetX < avatar.x){ this.left  = true; } else { this.left  = false; }
+            if(ui.avatarTargetX > avatar.x){ this.right = true; } else { this.right = false; }
+            //DOUBLE AXIS MOVEMENT
+            var distX = Math.abs(ui.avatarTargetX - avatar.x);
+            var distY = Math.abs(ui.avatarTargetY - avatar.y);
+            if( distX > distY ){
+                avatar.msX = avatar.ms;
+                avatar.msY = distY / (distX/avatar.ms);
+            }
+            else if(distY > distX){
+                avatar.msX = distX / (distY/avatar.ms);
+                avatar.msY = avatar.ms;
+            }
+            else{
+                avatar.msX = avatar.ms;
+                avatar.msY = avatar.ms;
+            }
+            //APPROACH POSITION
+            if(distX < 10){ avatar.msX = 1; }
+            if(distY < 10){ avatar.msY = 1; }
+        }
+        //BORDER COLLISION
+        if(avatar.y <= this.gameAreaYTop)                { this.up = false; }
+        if(avatar.y >= this.gameAreaYBtm - avatar.height){ this.down = false; }
+        if(avatar.x <= 0)                                { this.left = false; }
+        if(avatar.x >= canvas.width - avatar.width)      { this.right = false; }
+        
+        //FINAL POSITIONING
+        if(this.up)     { avatar.y -= avatar.msY; }
+        if(this.down)   { avatar.y += avatar.msY; }
+        if(this.left)   { avatar.x -= avatar.msX; }
+        if(this.right)  { avatar.x += avatar.msX; }
+        
+        //DRAW
+        ctx.drawImage(avatar.sprite, avatar.x, avatar.y, avatar.width, avatar.height);
+    };
     
-    //KEYBOARD
     this.keyDown = function(keyCode){
         switch(keyCode){
             case 38:
@@ -1073,6 +1147,11 @@ function UI(){
                 break;
             case 90:
                 this.fire = true;
+                break;
+            case 88:
+                this.fireS = true;
+                break;
+            case 67:
                 break;
         }
     };
@@ -1093,11 +1172,90 @@ function UI(){
             case 90:
                 this.fire = false;
                 break;
+            case 88:
+                this.fireS = false;
+                break;
+            case 67:
+                avatar.cycleWeapons();
+                break;
         }
     };
+    this.mouseDown = function(btn){
+        switch(btn){
+            case 0:
+                this.fire = true;
+                break;
+            case 2:
+                this.fireS = true;
+        }
+    };
+    this.mouseUp = function(btn){
+        switch(btn){
+            case 0:
+                this.fire = false;
+                break;
+            case 2:
+                this.fireS = false;
+        }
+    };
+}
+//GAME ANIMATION
+function drawGame(){
+    //BG UI
+    ctx.drawImage(gameUI.bg, 0, 0, canvas.width, canvas.height);
+    //INVENTORY
+    gameUI.drawInventory();
+    //SCORE
+    gameUI.drawScore();
+    //AVATAR
+    gameUI.drawAvatar();
+}
+
+//DRAWING TOOLS
+function CtxTool(){
+    this.clrBlack = "#000000";
+    this.clrGrey = "#4a4a4a";
+    this.clrRed = "#9c1919";
+    this.circle = function(x,y,r,clr){
+        ctx.beginPath();
+        ctx.fillStyle = clr;
+        ctx.arc(x, y, r, 0, Math.PI*2, false);
+        ctx.fill();
+        ctx.closePath();
+    };
+    this.strokeRect = function(x, y, w, h, lw, clr){
+        ctx.lineWidth = lw;
+        ctx.strokeStyle = clr;
+        ctx.strokeRect(x,y,w,h);
+    };
+    this.line = function(ox,oy,tx,ty,w,clr){
+        ctx.beginPath();
+        ctx.lineWidth = w;
+        ctx.strokeStyle = clr;
+        ctx.moveTo(ox,oy);
+        ctx.lineTo(tx,ty);
+        ctx.closePath();
+        ctx.stroke();
+    };
+    this.text = function(text, x, y, align, size, clr){
+        ctx.font = size + "px Courier";
+        ctx.textAlign = align;
+        ctx.fillStyle = clr;
+        ctx.fillText(text, x, y);
+    };
+}
+
+//UI
+function UI(){
+    //MOUSE / TOUCH TARGET
+    this.targetX;
+    this.targetY;
     
-    //MOUSE
-    this.mouseDown = function(){
+    this.avatarTargetX;
+    this.avatarTargetY;
+    
+    //KEYBOARD
+    this.keyDown = function(keyCode){
         switch(gameManager.gameState){
             case 0:
                 break;
@@ -1111,10 +1269,53 @@ function UI(){
                 break;
             case 5:
                 break;
+            case 6:
+                gameUI.keyDown(keyCode);
+                break;
+        }
+    };
+    this.keyUp = function(keyCode){
+        switch(gameManager.gameState){
+            case 0:
+                break;
+            case 1:
+                break;
+            case 2:
+                break;
+            case 3:
+                break;
+            case 4:
+                break;
+            case 5:
+                break;
+            case 6:
+                gameUI.keyUp(keyCode);
+                break;
+        }
+    };
+    
+    //MOUSE
+    this.mouseDown = function(btn){
+        switch(gameManager.gameState){
+            case 0:
+                break;
+            case 1:
+                break;
+            case 2:
+                break;
+            case 3:
+                break;
+            case 4:
+                break;
+            case 5:
+                break;
+            case 6:
+                gameUI.mouseDown(btn);
+                break;
         }
         
     };
-    this.mouseUp = function(){
+    this.mouseUp = function(btn){
         switch(gameManager.gameState){
             case 0:
                 break;
@@ -1131,6 +1332,9 @@ function UI(){
                 break;
             case 5:
                 inventoryMenu.manageClick();
+                break;
+            case 6:
+                gameUI.mouseUp(btn);
                 break;
         }
     };
@@ -1154,23 +1358,28 @@ function UI(){
     
     this.addEventListeners = function(){
         //KEYBOARD
-        canvas.addEventListener("keydown", function(event){
+        document.addEventListener("keydown", function(event){
             ui.keyDown(event.keyCode);
         });
-        canvas.addEventListener("keyup", function(event){
-            ui.keyUp(event.keycode);
+        document.addEventListener("keyup", function(event){
+            ui.keyUp(event.keyCode);
         });
         //MOUSE
         canvas.addEventListener("mousemove", function(event){
             ui.targetX = event.pageX - canvas.offsetLeft;
             ui.targetY = event.pageY - canvas.offsetTop;
+            ui.avatarTargetX = ui.targetX - avatar.width/2;
+            ui.avatarTargetY = ui.targetY - avatar.height/2;
             document.getElementById("mouseXY").textContent = ui.targetX + " " + ui.targetY;
         });
         canvas.addEventListener("mousedown", function(event){
-            ui.mouseDown();
+            ui.mouseDown(event.button);
         });
         canvas.addEventListener("mouseup", function(event){
-            ui.mouseUp();
+            ui.mouseUp(event.button);
+        });
+        canvas.addEventListener("contextmenu", function(event){
+            event.preventDefault();
         });
         //TOUCH
         canvas.addEventListener("touchstart", function(event){
