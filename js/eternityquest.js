@@ -30,7 +30,10 @@ var inventoryMenu;
 var weaponManager;
 var weaponType;
 
+var preGame;
+
 var gameUI;
+var enemyManager;
 
 var ctxTool;
 var ui;
@@ -102,10 +105,28 @@ function init(){
     avatar.sprite = new Image();
     assetManager.addAsset(avatar.sprite, "img/eternityquest/avatar.png");
     
+    //PRE GAME
+    preGame = new PreGame();
+    preGame.bg = new Image();
+    preGame.barTop = new Image();
+    preGame.barBtm = new Image();
+    assetManager.addAsset(preGame.bg, "img/eternityquest/bg.png");
+    assetManager.addAsset(preGame.barTop, "img/eternityquest/bg-bar-top.png");
+    assetManager.addAsset(preGame.barBtm, "img/eternityquest/bg-bar-btm.png");
+    
     //GAME
     gameUI = new GameUI();
     gameUI.bg = new Image();
-    assetManager.addAsset(gameUI.bg, "img/eternityquest/bg-game.png");
+    gameUI.barTop = new Image();
+    gameUI.barBtm = new Image();
+    assetManager.addAsset(gameUI.bg, "img/eternityquest/bg.png");
+    assetManager.addAsset(gameUI.barTop, "img/eternityquest/bg-bar-top.png");
+    assetManager.addAsset(gameUI.barBtm, "img/eternityquest/bg-bar-btm.png");
+    
+    //ENEMY MANAGER
+    enemyManager = new EnemyManager();
+    enemyManager.sprite = new Image();
+    assetManager.addAsset(enemyManager.sprite, "img/eternityquest/enemy.png");
     
     //LOAD ASSETS
     assetManager.loadAll();
@@ -193,8 +214,12 @@ function GameManager(){
             case 5:
                 canvas.style.cursor = "default";
                 break;
-            //MAIN GAME
+            //PRE GAME ANIMATION
             case 6:
+                canvas.style.cursor = "none";
+                break;
+            //MAIN GAME
+            case 7:
                 canvas.style.cursor = "crosshair";
                 break;
         }
@@ -360,6 +385,13 @@ function Avatar(){
     this.gold;
     this.health;
     
+    this.godMode;
+    this.godModeStart;
+    this.blink;
+    this.blinkDuration;
+    this.blinkStart;
+    this.blinkInterval;
+    
     this.deathDuration;
     this.deathStartTime;
     
@@ -383,6 +415,22 @@ function Avatar(){
         }
     };
     
+    this.godModeOn = function(duration){
+        this.godMode = true;
+        this.godModeStart = Date.now();
+        if(duration){ this.duration = duration; }
+        else{ this.duration = 1000; }
+    };
+    this.godModeOff = function(){
+        this.godMode = false;
+    };
+    this.toggleBlink = function(){
+        if(Date.now() >= this.blinkStart + this.blinkInterval){
+            this.blink = !this.blink;
+            this.blinkStart = Date.now();
+        }
+    };
+    
     this.init = function(){
         this.width = sizeManager.spriteWidth;
         this.height = sizeManager.spriteHeight;
@@ -392,6 +440,10 @@ function Avatar(){
         this.ms = 8*sizeManager.factor;
         this.msX = 8*sizeManager.factor;
         this.msY = 8*sizeManager.factor;
+        
+        this.blink = false;
+        this.blinkStart = Date.now();
+        this.blinkInterval = 50;
     };
     this.load = function(){
         this.name = profile.name;
@@ -473,12 +525,58 @@ function WeaponS(name, type, lvl, icon, cost){
     this.coolDown;
 }
 
+//PROJECTILE MANAGER
+function ProjectilManager(){
+    this.projectileArray = [];
+}
+//PROJECTILE OBJ
+function Projectile(x, y, ms){
+    this.x = x;
+    this.y = y;
+    this.ms = ms;
+}
+function ProjectileBasic(x, y, ms, r, clr){
+    Projectile.call(this, x, y, ms);
+    this.r = r;
+    this.clr = clr;
+}
+function ProjectileSPrite(x, y, ms, sprite, w, h){
+    Projectile.call(this, x, y, ms);
+    this.sprite = sprite;
+    this.w = w;
+    this.h = h;
+}
+
 //ENEMY MANAGER
 function EnemyManager(){
     this.enemyArray = [];
-}
-function Enemy(){
+    this.enemyDeathArray = [];
+    //this.lvl;
+    this.spawnInterval = 1000;
+    this.lastSpawnTime = Date.now();
+    this.sprite;
+    this.ms = 5*sizeManager.factor;
+    this.width = 50*sizeManager.factor;
+    this.height = 50*sizeManager.factor;
     
+    this.spawn = function(){
+        if(Date.now() >= this.lastSpawnTime + this.spawnInterval){//Random X position
+            var x = Math.floor(Math.random() * (canvas.width - this.width));
+            var y = gameUI.gameAreaYTop;
+            this.enemyArray.push(new Enemy(this.sprite, x, y, this.width, this.height, this.ms));
+            this.lastSpawnTime = Date.now();
+        }
+    };
+    
+}
+function Enemy(sprite, x, y, w, h, ms){
+    this.sprite = sprite;
+    this.x = x;
+    this.y = y;
+    this.width = w;
+    this.height = h;
+    this.ms = ms;
+    this.alpha = 1;
 }
 
 //   --- === [ ANIMATIONS ] === ---
@@ -504,6 +602,9 @@ function draw(){
             drawInventoryMenu();
             break;
         case 6:
+            drawPreGame();
+            break;
+        case 7:
             drawGame();
             break;
     }
@@ -1060,10 +1161,63 @@ function drawInventoryMenu(){
     }
 }
 
+//PRE GAME ANIMATION
+function PreGame(){
+    this.bg;
+    this.barTop;
+    this.barBtm;
+    this.msg = "READY?";
+    this.delayStart = false;
+    this.delayStartTime;
+    this.delay = 800;
+    
+    this.barW = 600*sizeManager.factor;
+    this.barH = 80*sizeManager.factor;
+    this.barMs = 1.5*sizeManager.factor;
+    this.rectBarTopY = -80*sizeManager.factor;
+    this.rectBarBtmY = canvas.height;
+    this.animate = function(){
+        if(this.rectBarTopY < 0){
+            this.rectBarTopY += this.barMs;
+            this.rectBarBtmY -= this.barMs;
+        }
+        else{
+            this.rectBarTopY = 0;
+            this.rectBarTopX = canvas.height - this.barH;
+            this.msg = "COMMENCE";
+            if(!this.delayStart){ this.delayStart = true; this.delayStartTime = Date.now(); }
+            if(this.delayStart && Date.now() >= this.delayStartTime + this.delay){
+                //GO TO GAME
+                gameManager.changeGameState(7);
+            }
+        }
+    };
+}
+//PRE GAME ANIMATION
+function drawPreGame(){
+    //MAIN BG
+    ctx.drawImage(preGame.bg, 0, 0, canvas.width, canvas.height);
+    //Message
+    ctxTool.text(preGame.msg, 300*sizeManager.factor, 300*sizeManager.factor, "center", sizeManager.fontSizeL, ctxTool.clrRed);
+    //ANIMATION
+    preGame.animate();
+    //BARS
+    ctx.drawImage(preGame.barTop, 0, preGame.rectBarTopY, preGame.barW, preGame.barH);
+    ctx.drawImage(preGame.barBtm, 0, preGame.rectBarBtmY, preGame.barW, preGame.barH);
+    //AVATAR
+    avatar.toggleBlink();
+    if(!avatar.blink){
+        ctx.drawImage(avatar.sprite, avatar.x, avatar.y, avatar.width, avatar.height);
+    }
+}
+
 // --- === GAME === ---
 //GAME UI
 function GameUI(){
     this.bg;
+    this.barTop;
+    this.barBtm;
+    this.barHeight = 80*sizeManager.factor;
     this.score = 0;
     this.gameAreaYTop = 80*sizeManager.factor;
     this.gameAreaYBtm = 80*sizeManager.factor + canvas.height - (160*sizeManager.factor);
@@ -1087,7 +1241,7 @@ function GameUI(){
         if(avatar.activeWeaponIndex === 1){ ctxTool.strokeRect(200*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor, 2*sizeManager.factor, ctxTool.clrRed); }
     };
     this.drawScore = function(){
-        ctxTool.text(avatar.score, 300*sizeManager.factor, 50*sizeManager.factor, sizeManager.fontSizeS, "center", ctxTool.clrRed);
+        ctxTool.text(avatar.score, 300*sizeManager.factor, 50*sizeManager.factor, "center", sizeManager.fontSizeS, ctxTool.clrRed);
     };
     this.drawAvatar = function(){
         if(settings.mouseControl){
@@ -1112,8 +1266,10 @@ function GameUI(){
                 avatar.msY = avatar.ms;
             }
             //APPROACH POSITION
-            if(distX < 10){ avatar.msX = 1; }
-            if(distY < 10){ avatar.msY = 1; }
+            if(distX < 8*sizeManager.factor){ avatar.msX = 2; }
+            if(distY < 8*sizeManager.factor){ avatar.msY = 2; }
+            if(distX < 2*sizeManager.factor){ avatar.msX = 0.5; }
+            if(distY < 2*sizeManager.factor){ avatar.msY = 0.5; }
         }
         //BORDER COLLISION
         if(avatar.y <= this.gameAreaYTop)                { this.up = false; }
@@ -1129,6 +1285,56 @@ function GameUI(){
         
         //DRAW
         ctx.drawImage(avatar.sprite, avatar.x, avatar.y, avatar.width, avatar.height);
+    };
+    this.drawEnemy = function(){
+        //TRY SPAWN ENEMY
+        enemyManager.spawn();
+        //ITERATE ENEMY ARRAY
+        for(var i = 0 ; i < enemyManager.enemyArray.length ; i++){
+            var e = enemyManager.enemyArray[i];
+            //BORDER COLLISION (Exit bottom)
+            if(e.y >= gameUI.gameAreaYBtm){
+                enemyManager.enemyArray.splice(i,1);
+                i--;
+            }
+            //ELSE CHECK PROJECTILE COLLISION // AVATAR COLLISION
+            else{
+                //PROJECTILE COLLISION
+                
+                //AVATAR COLLISION
+                if(!avatar.godMode){
+                    if(avatar.x < e.x + e.width &&
+                       avatar.x + avatar.width > e.x &&
+                       avatar.y < e.y + e.height &&
+                       avatar.y + avatar.height > e.y){
+                        enemyManager.enemyDeathArray.push(enemyManager.enemyArray.splice(i,1)[0]);
+                        i--;
+                        avatar.health -= 1;
+                    }
+                }
+            }
+            
+            //POSITIONING / MOVEMENT
+            e.y += e.ms;
+            //DRAW
+            ctx.drawImage(e.sprite, e.x, e.y, e.width, e.height);
+        }
+        
+        //ITERATE ENEMY DEATH ARRAY
+        for(var i = 0 ; i < enemyManager.enemyDeathArray.length ; i++){
+            var e = enemyManager.enemyDeathArray[i];
+            if(e.alpha > 0){
+                e.alpha -= 0.02;
+            }
+            else{
+                enemyManager.enemyDeathArray.splice(i,1);
+                i--;
+            }
+            ctx.globalAlpha = e.alpha;
+            if(e.alpha <= 0){ ctx.globalAlpha = 0; }
+            ctx.drawImage(e.sprite, e.x, e.y, e.width, e.height);
+            ctx.globalAlpha = 1;
+        }
     };
     
     this.keyDown = function(keyCode){
@@ -1201,14 +1407,19 @@ function GameUI(){
 }
 //GAME ANIMATION
 function drawGame(){
-    //BG UI
+    //BG
     ctx.drawImage(gameUI.bg, 0, 0, canvas.width, canvas.height);
-    //INVENTORY
-    gameUI.drawInventory();
-    //SCORE
-    gameUI.drawScore();
     //AVATAR
     gameUI.drawAvatar();
+    //ENEMY
+    gameUI.drawEnemy();
+    //BARS
+    ctx.drawImage(gameUI.barTop, 0, 0, canvas.width, gameUI.barHeight);
+    ctx.drawImage(gameUI.barBtm, 0, canvas.height - gameUI.barHeight, canvas.width, gameUI.barHeight);
+    //SCORE
+    gameUI.drawScore();
+    //INVENTORY
+    gameUI.drawInventory();
 }
 
 //DRAWING TOOLS
@@ -1270,6 +1481,8 @@ function UI(){
             case 5:
                 break;
             case 6:
+                break;
+            case 7:
                 gameUI.keyDown(keyCode);
                 break;
         }
@@ -1289,6 +1502,8 @@ function UI(){
             case 5:
                 break;
             case 6:
+                break;
+            case 7:
                 gameUI.keyUp(keyCode);
                 break;
         }
@@ -1310,6 +1525,8 @@ function UI(){
             case 5:
                 break;
             case 6:
+                break;
+            case 7:
                 gameUI.mouseDown(btn);
                 break;
         }
@@ -1334,6 +1551,8 @@ function UI(){
                 inventoryMenu.manageClick();
                 break;
             case 6:
+                break;
+            case 7:
                 gameUI.mouseUp(btn);
                 break;
         }
