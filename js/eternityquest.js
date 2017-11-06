@@ -34,6 +34,8 @@ var preGame;
 
 var gameUI;
 var enemyManager;
+var explosionManager;
+var death;
 
 var ctxTool;
 var ui;
@@ -128,6 +130,23 @@ function init(){
     enemyManager.sprite = new Image();
     assetManager.addAsset(enemyManager.sprite, "img/eternityquest/enemy.png");
     
+    //EXPLOSION MANAGER
+    explosionManager = new ExplosionManager();
+    explosionManager.sprite0 = new Image();
+    explosionManager.sprite1 = new Image();
+    explosionManager.sprite2 = new Image();
+    assetManager.addAsset(explosionManager.sprite0, "img/eternityquest/explosion0.png");
+    assetManager.addAsset(explosionManager.sprite1, "img/eternityquest/explosion1.png");
+    assetManager.addAsset(explosionManager.sprite2, "img/eternityquest/explosion2.png");
+    explosionManager.spriteArray = [explosionManager.sprite0, explosionManager.sprite1, explosionManager.sprite2];
+    
+    //DEATH
+    death = new Death();
+    death.bg = new Image();
+    death.btnBack = new Image();
+    assetManager.addAsset(death.bg, "img/eternityquest/bg-game.png");
+    assetManager.addAsset(death.btnBack, "img/eternityquest/btn-back.png");
+    
     //LOAD ASSETS
     assetManager.loadAll();
     
@@ -149,6 +168,7 @@ function SizeManager(){
     this.spriteHeight;
     this.fontSizeXS;
     this.fontSizeS;
+    this.fontSizeM;
     this.fontSizeL;
     this.factor;
     this.resizeCanvas = function(){
@@ -180,6 +200,7 @@ function SizeManager(){
         this.spriteHeight = this.factor * 50;
         this.fontSizeXS = this.factor * 20;
         this.fontSizeS = this.factor * 35;
+        this.fontSizeM = this.factor * 45;
         this.fontSizeL = this.factor * 60;
     };
 }
@@ -187,6 +208,17 @@ function SizeManager(){
 //GAME MANAGER
 function GameManager(){
     this.gameState;
+    this.profileLoaded = false;
+    this.globalReset = function(){
+        //SAVE SCORE
+        avatar.gold += avatar.score;
+        if(avatar.score >= avatar.highScore){ avatar.highScore = avatar.score; }
+        profileManager.updateProfile();
+        avatar.init();
+        //RESET 
+        enemyManager.reset();
+        explosionManager.reset();
+    };
     this.changeGameState = function(target){
         this.gameState = target;
         switch(target){
@@ -222,6 +254,9 @@ function GameManager(){
             case 7:
                 canvas.style.cursor = "crosshair";
                 break;
+            //DEATH
+            case 8:
+                canvas.style.cursor = "none";
         }
     };
 }
@@ -415,6 +450,9 @@ function Avatar(){
         }
     };
     
+    this.toggleGodMode = function(){
+        this.godMode = !this.godMode;
+    };
     this.godModeOn = function(duration){
         this.godMode = true;
         this.godModeStart = Date.now();
@@ -440,6 +478,7 @@ function Avatar(){
         this.ms = 8*sizeManager.factor;
         this.msX = 8*sizeManager.factor;
         this.msY = 8*sizeManager.factor;
+        this.health = 1;
         
         this.blink = false;
         this.blinkStart = Date.now();
@@ -559,6 +598,10 @@ function EnemyManager(){
     this.width = 50*sizeManager.factor;
     this.height = 50*sizeManager.factor;
     
+    this.reset = function(){
+        this.enemyArray = [];
+        this.enemyDeathArray = [];
+    };
     this.spawn = function(){
         if(Date.now() >= this.lastSpawnTime + this.spawnInterval){//Random X position
             var x = Math.floor(Math.random() * (canvas.width - this.width));
@@ -577,6 +620,27 @@ function Enemy(sprite, x, y, w, h, ms){
     this.height = h;
     this.ms = ms;
     this.alpha = 1;
+}
+
+//EXPLOSIONS
+function ExplosionManager(){
+    this.sprite0;
+    this.sprite1;
+    this.sprite2;
+    this.spriteArray;
+    this.explosionArray = [];
+    this.reset = function(){
+        this.explosionArray = [];
+    };
+}
+function Explosion(x, y){
+    this.x = x;
+    this.y = y;
+    this.width = 50*sizeManager.factor;
+    this.height = 50*sizeManager.factor;
+    this.state = 0;
+    this.frameStartTime = Date.now();
+    this.frameDuration = 150;
 }
 
 //   --- === [ ANIMATIONS ] === ---
@@ -606,6 +670,9 @@ function draw(){
             break;
         case 7:
             drawGame();
+            break;
+        case 8:
+            drawDeath();
             break;
     }
     
@@ -659,7 +726,9 @@ function drawTransitionAnimation(){
     else{
         ctx.globalAlpha = 1;
         transition.alpha = 0;
-        gameManager.changeGameState(2);
+        if(gameManager.profileLoaded){ gameManager.globalReset(); gameManager.changeGameState(3); }
+        else{ gameManager.changeGameState(2); }
+        
     }
 }
 
@@ -702,6 +771,7 @@ function ProfileMenu(){
         avatar.init();
         avatar.load();
         settings.load(profile.settings);
+        gameManager.profileLoaded = true;
         gameManager.changeGameState(3);
     };
 }
@@ -766,7 +836,7 @@ function MainMenu(){
             else{ this.window = true; }
         }
         if(ui.targetCollision(this.rectWarnBack)){ this.window = false; }
-        if(ui.targetCollision(this.rectWarnBtn)){ gameManager.changeGameState(6); }
+        if(ui.targetCollision(this.rectWarnBtn)){ this.window = false; gameManager.changeGameState(6); }
     };
 }
 //MAIN MENU ANIMATION
@@ -1187,6 +1257,7 @@ function PreGame(){
             this.msg = "COMMENCE";
             if(!this.delayStart){ this.delayStart = true; this.delayStartTime = Date.now(); }
             if(this.delayStart && Date.now() >= this.delayStartTime + this.delay){
+                this.delayStart = false;
                 //GO TO GAME
                 gameManager.changeGameState(7);
             }
@@ -1218,7 +1289,6 @@ function GameUI(){
     this.barTop;
     this.barBtm;
     this.barHeight = 80*sizeManager.factor;
-    this.score = 0;
     this.gameAreaYTop = 80*sizeManager.factor;
     this.gameAreaYBtm = 80*sizeManager.factor + canvas.height - (160*sizeManager.factor);
     
@@ -1283,8 +1353,19 @@ function GameUI(){
         if(this.left)   { avatar.x -= avatar.msX; }
         if(this.right)  { avatar.x += avatar.msX; }
         
-        //DRAW
-        ctx.drawImage(avatar.sprite, avatar.x, avatar.y, avatar.width, avatar.height);
+        // DARW
+        //GODMODE
+        if(avatar.godMode){
+            avatar.toggleBlink();
+            //DRAW
+            if(!avatar.blink){
+                ctx.drawImage(avatar.sprite, avatar.x, avatar.y, avatar.width, avatar.height);
+            }
+        }
+        else{
+            ctx.drawImage(avatar.sprite, avatar.x, avatar.y, avatar.width, avatar.height);
+        }
+        
     };
     this.drawEnemy = function(){
         //TRY SPAWN ENEMY
@@ -1308,6 +1389,7 @@ function GameUI(){
                        avatar.y < e.y + e.height &&
                        avatar.y + avatar.height > e.y){
                         enemyManager.enemyDeathArray.push(enemyManager.enemyArray.splice(i,1)[0]);
+                        explosionManager.explosionArray.push(new Explosion(e.x, e.y));
                         i--;
                         avatar.health -= 1;
                     }
@@ -1336,6 +1418,24 @@ function GameUI(){
             ctx.globalAlpha = 1;
         }
     };
+    this.drawExplosions = function(){
+        for(var i = 0 ; i < explosionManager.explosionArray.length ; i++){
+            var e = explosionManager.explosionArray[i];
+            if(e){
+                if(Date.now() >= e.frameStartTime + e.frameDuration){
+                    e.frameStartTime = Date.now();
+                    e.state++;
+                }
+                if(e.state < 3){
+                    ctx.drawImage(explosionManager.spriteArray[e.state], e.x, e.y, e.width, e.height);
+                }
+                else{
+                    explosionManager.explosionArray.splice(i,1);
+                    i--;
+                }
+            }
+        }
+    };
     
     this.keyDown = function(keyCode){
         switch(keyCode){
@@ -1362,6 +1462,7 @@ function GameUI(){
         }
     };
     this.keyUp = function(keyCode){
+        console.log(keyCode);
         switch(keyCode){
             case 38:
                 this.up = false;
@@ -1384,6 +1485,8 @@ function GameUI(){
             case 67:
                 avatar.cycleWeapons();
                 break;
+            case 71:
+                avatar.toggleGodMode();
         }
     };
     this.mouseDown = function(btn){
@@ -1411,8 +1514,12 @@ function drawGame(){
     ctx.drawImage(gameUI.bg, 0, 0, canvas.width, canvas.height);
     //AVATAR
     gameUI.drawAvatar();
+    //PROJECTILE
+    
     //ENEMY
     gameUI.drawEnemy();
+    //EXPLOSIONS
+    gameUI.drawExplosions();
     //BARS
     ctx.drawImage(gameUI.barTop, 0, 0, canvas.width, gameUI.barHeight);
     ctx.drawImage(gameUI.barBtm, 0, canvas.height - gameUI.barHeight, canvas.width, gameUI.barHeight);
@@ -1420,6 +1527,70 @@ function drawGame(){
     gameUI.drawScore();
     //INVENTORY
     gameUI.drawInventory();
+    
+    if(avatar.health <= 0){
+        gameManager.changeGameState(8);
+        death.initCoordinates(avatar.x, avatar.y);
+    }
+}
+
+//DEATH
+function Death(){
+    this.bg;
+    this.btnBack;
+    this.msgY = 400*sizeManager.factor;
+    this.scoreY = 450*sizeManager.factor;
+    this.rectBtnBack = [237.5*sizeManager.factor, 625*sizeManager.factor, 125*sizeManager.factor, 50*sizeManager.factor];
+    this.explosionInterval = 200;
+    this.lastExplosionTime = Date.now();
+    this.explosionCount = 0;
+    this.explosionX;
+    this.explosionY;
+    this.initCoordinates = function(x,y){
+        this.explosionX = [x, x-avatar.width/2, x+avatar.width/2, x,                 x];
+        this.explosionY = [y, y               , y               , y-avatar.height/2, y+avatar.width/2];
+    };
+    this.drawMsg = function(){
+        ctxTool.text("YOU DIED", canvas.width/2, this.msgY, "center", sizeManager.fontSizeL, ctxTool.clrRed);
+        ctxTool.text("Final Score: " + avatar.score, canvas.width/2, this.scoreY, "center", sizeManager.fontSizeM, ctxTool.clrRed);
+        ctx.drawImage(this.btnBack, this.rectBtnBack[0], this.rectBtnBack[1], this.rectBtnBack[2], this.rectBtnBack[3]);
+    };
+    this.drawAvatar = function(){
+        ctx.drawImage(avatar.sprite, avatar.x, avatar.y, avatar.width, avatar.height);
+        //EXPLOSIONS
+    };
+    this.generateExplosions = function(){
+        if(Date.now() > this.lastExplosionTime + this.explosionInterval){
+            this.lastExplosionTime = Date.now();
+            explosionManager.explosionArray.push(new Explosion(this.explosionX[this.explosionCount], this.explosionY[this.explosionCount]));
+            if(this.explosionCount < this.explosionX.length){ this.explosionCount++; }
+            else{ this.explosionCount = 0; }
+        }
+    };
+    this.manageClick = function(){
+        if(ui.targetCollision(this.rectBtnBack)){
+            gameManager.changeGameState(1);
+        }
+    };
+}
+//DEATH ANIMATION
+function drawDeath(){
+    ctx.drawImage(death.bg, 0, 0, canvas.width, canvas.height);
+    //SCORE
+    gameUI.drawScore();
+    //AVATAR
+    death.drawAvatar();
+    //GENERATE EXPLOSIONS
+    death.generateExplosions();
+    //EXPLOSIONS
+    gameUI.drawExplosions();
+    //MSG
+    death.drawMsg();
+    //CHECK MOUSE TARGET COLLISIONS
+    if(ui.targetCollision(death.rectBtnBack)){
+        canvas.style.cursor = "pointer";
+    }
+    else{ canvas.style.cursor = "default"; }
 }
 
 //DRAWING TOOLS
@@ -1554,6 +1725,9 @@ function UI(){
                 break;
             case 7:
                 gameUI.mouseUp(btn);
+                break;
+            case 8:
+                death.manageClick();
                 break;
         }
     };

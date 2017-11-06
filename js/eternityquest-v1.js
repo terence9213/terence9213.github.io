@@ -212,8 +212,8 @@ function init(){
     avatarSprite.src = "img/eternityquest/avatar.png";
     enemySprite.src = "img/eternityquest/enemy.png";
     transitionBg.src = "img/eternityquest/bg-transition.png";
-    menuBg.src = "img/eternityquest/menu-bg.png";
-    bg.src = "img/eternityquest/bg3.png";
+    menuBg.src = "img/eternityquest/bg-menu.png";
+    bg.src = "img/eternityquest/bg.png";
     mouseIcon.src = "img/eternityquest/mouse-icon.png";
     keyboardIcon.src = "img/eternityquest/keyboard-icon.png";
     soundIcon.src = "img/eternityquest/sound-icon.png";
