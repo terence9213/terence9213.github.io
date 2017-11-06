@@ -170,6 +170,7 @@ function SizeManager(){
     this.fontSizeS;
     this.fontSizeM;
     this.fontSizeL;
+    this.fontSizeInput;
     this.factor;
     this.resizeCanvas = function(){
         //300 400 // 375 500 // 450 600 // 525 700 // 600 800
@@ -202,6 +203,7 @@ function SizeManager(){
         this.fontSizeS = this.factor * 35;
         this.fontSizeM = this.factor * 45;
         this.fontSizeL = this.factor * 60;
+        this.fontSizeInput = this.factor * 28;
     };
 }
 
@@ -480,6 +482,7 @@ function Avatar(){
         this.msY = 8*sizeManager.factor;
         this.health = 1;
         
+        this.godMode = false;
         this.blink = false;
         this.blinkStart = Date.now();
         this.blinkInterval = 50;
@@ -736,6 +739,30 @@ function drawTransitionAnimation(){
 function ProfileMenu(){
     this.bg;
     this.selectedProfile = 0;
+    this.txtInput = false;
+    this.inputString = "";
+    this.inputW = 175*sizeManager.factor;
+    this.inputH = 40*sizeManager.factor;
+    this.rectInputX = 190*sizeManager.factor;
+    this.rectInputY = [245*sizeManager.factor, 370*sizeManager.factor, 495*sizeManager.factor];
+    this.rectSaveX = 365*sizeManager.factor;
+    this.btnW = 95*sizeManager.factor;
+    this.btnH = 40*sizeManager.factor;
+    this.txtX = 370*sizeManager.factor;
+    this.txtY = [275*sizeManager.factor, 400*sizeManager.factor, 525*sizeManager.factor];
+    this.inputX = 195*sizeManager.factor;
+    this.cursorX = 195*sizeManager.factor;
+    this.cursorYo = [275*sizeManager.factor, 400*sizeManager.factor, 525*sizeManager.factor];
+    this.cBlink = false;
+    this.cBlinkInterval = 400;
+    this.cBlinkTime = Date.now();
+    this.toggleCBlink = function(){
+        if(Date.now() > this.cBlinkTime + this.cBlinkInterval){
+            this.cBlinkTime = Date.now();
+            this.cBlink = !this.cBlink;
+        }
+    };
+    
     this.rect1 = [100*sizeManager.factor, 200*sizeManager.factor, 400*sizeManager.factor, 100*sizeManager.factor];
     this.rect2 = [100*sizeManager.factor, 325*sizeManager.factor, 400*sizeManager.factor, 100*sizeManager.factor];
     this.rect3 = [100*sizeManager.factor, 450*sizeManager.factor, 400*sizeManager.factor, 100*sizeManager.factor];
@@ -755,7 +782,14 @@ function ProfileMenu(){
         
         if(!profileManager.profileArray[this.selectedProfile]){
             //SHOW TEXT INPUT
-            ui.createTextInput(240 + this.selectedProfile*125);
+            //ui.createTextInput(240 + this.selectedProfile*125);
+            this.txtInput = true;
+        }else{ this.txtInput = false; }
+        if(this.txtInput && ui.targetCollision([this.rectSaveX, this.rectInputY[this.selectedProfile], this.btnW, this.btnH])){
+            if(this.inputString.length > 0){
+                profileManager.createNewProfile(this.inputString, this.selectedProfile);
+                this.txtInput = false;
+            }
         }
     };
     this.deleteProfile = function(){
@@ -774,21 +808,30 @@ function ProfileMenu(){
         gameManager.profileLoaded = true;
         gameManager.changeGameState(3);
     };
+    this.manageInput = function(key){
+        if(key === "Backspace"){
+            this.inputString = this.inputString.slice(0,-1);
+        }else{
+            if(this.inputString.length < 10){
+                if(key !== "CapsLock" && key !== "Tab" && key !== "Shift" && key !== "Alt" && key !== "Control"){
+                    this.inputString += key;
+                }
+            }
+        }
+    };
 }
 //PROFILE MENU
 function drawProfileMenu(){
     ctx.drawImage(profileMenu.bg, 0, 0, canvas.width, canvas.height);
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = "black";
-    ctx.font = sizeManager.fontSizeS + "px Courier";
+    //SELECTION
     var rect = profileMenu.rectArray[profileMenu.selectedProfile];
-    ctx.strokeRect(rect[0], rect[1], rect[2], rect[3]);
+    ctxTool.strokeRect(rect[0], rect[1], rect[2], rect[3], 5*sizeManager.factor, ctxTool.clrBlack);
+    //PROFILE NAMES
     var textY = 275*sizeManager.factor;
     for(var i = 0 ; i < 3 ; i++){
         var p = profileManager.profileArray[i];
         if(p){
-            ctx.textAlign = "left";
-            ctx.fillText(p.name, 190*sizeManager.factor, textY);
+            ctxTool.text(p.name, 190*sizeManager.factor, textY, "left", sizeManager.fontSizeS, ctxTool.clrBlack);
         }
         else{
             ctx.textAlign = "center";
@@ -796,25 +839,39 @@ function drawProfileMenu(){
         }
         textY += 125*sizeManager.factor;
     }
+    
+    //TEXT INPUT
+    if(profileMenu.txtInput){
+        ctxTool.rect(profileMenu.rectInputX, profileMenu.rectInputY[profileMenu.selectedProfile], profileMenu.inputW, profileMenu.inputH, ctxTool.clrWhite);
+        ctxTool.rect(profileMenu.rectSaveX, profileMenu.rectInputY[profileMenu.selectedProfile], profileMenu.btnW, profileMenu.btnH, ctxTool.clrYellow);
+        ctxTool.text("SAVE", profileMenu.txtX, profileMenu.txtY[profileMenu.selectedProfile], "left", sizeManager.fontSizeS, ctxTool.clrBlack);
+        ctxTool.text(profileMenu.inputString, profileMenu.inputX, profileMenu.txtY[profileMenu.selectedProfile], "left", sizeManager.fontSizeInput, ctxTool.clrBlack);
+        //CURSOR
+        profileMenu.toggleCBlink();
+        if(profileMenu.cBlink){
+            var cx = profileMenu.cursorX + (17*profileMenu.inputString.length)*sizeManager.factor;
+            var cy = profileMenu.cursorYo[profileMenu.selectedProfile];
+            var cyt = cy - 20*sizeManager.factor;
+            ctxTool.line(cx, cy, cx, cyt, 2*sizeManager.factor, ctxTool.clrBlack);
+        }
+    }
+    
     //CHECK MOUSE TARGET COLLISIONS
     if(ui.targetCollision(profileMenu.rect1) ||
            ui.targetCollision(profileMenu.rect2)||
            ui.targetCollision(profileMenu.rect3) ||
            ui.targetCollision(profileMenu.rectLoadBtn)){
        canvas.style.cursor = "pointer";
-       ctx.lineWidth = 2;
-       ctx.strokeStyle = "red";
        if(ui.targetCollision(profileMenu.rect1X)){
-            ctx.strokeRect(profileMenu.rect1X[0], profileMenu.rect1X[1], profileMenu.rect1X[2], profileMenu.rect1X[3]);
+            ctxTool.strokeRect(profileMenu.rect1X[0], profileMenu.rect1X[1], profileMenu.rect1X[2], profileMenu.rect1X[3], 2*sizeManager.factor, ctxTool.clrRed);
         }
        if(ui.targetCollision(profileMenu.rect2X)){
-            ctx.strokeRect(profileMenu.rect2X[0], profileMenu.rect2X[1], profileMenu.rect2X[2], profileMenu.rect2X[3]);
+            ctxTool.strokeRect(profileMenu.rect2X[0], profileMenu.rect2X[1], profileMenu.rect2X[2], profileMenu.rect2X[3], 2*sizeManager.factor, ctxTool.clrRed);
         }
        if(ui.targetCollision(profileMenu.rect3X)){
-            ctx.strokeRect(profileMenu.rect3X[0], profileMenu.rect3X[1], profileMenu.rect3X[2], profileMenu.rect3X[3]);
+            ctxTool.strokeRect(profileMenu.rect3X[0], profileMenu.rect3X[1], profileMenu.rect3X[2], profileMenu.rect3X[3], 2*sizeManager.factor, ctxTool.clrRed);
         }
     }
-        
     else{ canvas.style.cursor = "default"; }
 }
 
@@ -1307,8 +1364,8 @@ function GameUI(){
         //Secondary
         if(avatar.loadout[2]){ ctx.drawImage(avatar.loadout[2].icon, 425*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor); }
         //Selection
-        if(avatar.activeWeaponIndex === 0){ ctxTool.strokeRect(50*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor, 2*sizeManager.factor, ctxTool.clrRed); }
-        if(avatar.activeWeaponIndex === 1){ ctxTool.strokeRect(200*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor, 2*sizeManager.factor, ctxTool.clrRed); }
+        if(avatar.activeWeaponIndex === 0){ ctxTool.strokeRect(50*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor, 4*sizeManager.factor, ctxTool.clrRed); }
+        if(avatar.activeWeaponIndex === 1){ ctxTool.strokeRect(200*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor, 4*sizeManager.factor, ctxTool.clrRed); }
     };
     this.drawScore = function(){
         ctxTool.text(avatar.score, 300*sizeManager.factor, 50*sizeManager.factor, "center", sizeManager.fontSizeS, ctxTool.clrRed);
@@ -1462,7 +1519,6 @@ function GameUI(){
         }
     };
     this.keyUp = function(keyCode){
-        console.log(keyCode);
         switch(keyCode){
             case 38:
                 this.up = false;
@@ -1596,12 +1652,21 @@ function drawDeath(){
 //DRAWING TOOLS
 function CtxTool(){
     this.clrBlack = "#000000";
+    this.clrWhite = "#ffffff";
     this.clrGrey = "#4a4a4a";
     this.clrRed = "#9c1919";
+    this.clrYellow = "#ffff00";
     this.circle = function(x,y,r,clr){
         ctx.beginPath();
         ctx.fillStyle = clr;
         ctx.arc(x, y, r, 0, Math.PI*2, false);
+        ctx.fill();
+        ctx.closePath();
+    };
+    this.rect = function(x,y,w,h, clr){
+        ctx.beginPath();
+        ctx.rect(x, y, w, h);
+        ctx.fillStyle = clr;
         ctx.fill();
         ctx.closePath();
     };
@@ -1658,13 +1723,14 @@ function UI(){
                 break;
         }
     };
-    this.keyUp = function(keyCode){
+    this.keyUp = function(keyCode, key){
         switch(gameManager.gameState){
             case 0:
                 break;
             case 1:
                 break;
             case 2:
+                profileMenu.manageInput(key);
                 break;
             case 3:
                 break;
@@ -1755,7 +1821,7 @@ function UI(){
             ui.keyDown(event.keyCode);
         });
         document.addEventListener("keyup", function(event){
-            ui.keyUp(event.keyCode);
+            ui.keyUp(event.keyCode, event.key);
         });
         //MOUSE
         canvas.addEventListener("mousemove", function(event){
