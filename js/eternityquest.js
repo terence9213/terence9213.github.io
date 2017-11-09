@@ -218,8 +218,12 @@ function GameManager(){
         profileManager.updateProfile();
         avatar.init();
         //RESET 
+        avatar.coolDownReset();
+        weaponManager.resetAllWeaponCoolDown();
         enemyManager.reset();
         explosionManager.reset();
+        preGame.reset();
+        gameUI.resetUI();
     };
     this.changeGameState = function(target){
         this.gameState = target;
@@ -448,8 +452,8 @@ function Avatar(){
     this.checkLoadout = function(){
         for(var i = 0 ; i < this.loadout.length ; i++){
             if(this.loadout[i]){ return true; }
-            else{ return false; }
         }
+        return false;
     };
     
     this.toggleGodMode = function(){
@@ -494,6 +498,14 @@ function Avatar(){
         this.inventoryP = profile.inventory.split("").map(Number);
         this.inventoryS = profile.inventoryS.split("").map(Number);
     };
+    this.coolDownReset = function(){
+        for(var i = 0 ; i < this.loadout.length ; i++){
+            if(this.loadout[i]){
+                this.loadout[i].heatBar = 0;
+                this.loadout[i].disabled = false;
+            }
+        }
+    };
 }
 
 //WEAPON MANAGER
@@ -535,6 +547,12 @@ function WeaponManager(){
             new WeaponS("EMP", weaponType.SECONDARY, 0)
         ];
     };
+    this.resetAllWeaponCoolDown = function(){
+        for(var i = 0 ; i < this.weaponArrayP.length ; i++){
+            var w = this.weaponArrayP[i];
+            w.resetHeat();
+        }
+    };
 }
 function Weapon(name, type, lvl, icon, cost){
     this.name = name;
@@ -543,6 +561,54 @@ function Weapon(name, type, lvl, icon, cost){
     this.icon = icon;
     this.cost = cost;
     this.maxLvl = 5;
+    this.disabled = false;
+    this.heatBarMaxW = 100*sizeManager.factor;
+    this.heatBarW = 0;
+    this.overHeatTime = 1000;
+    this.coolDownTime = 2000;
+    this.heatRate = this.heatBarMaxW / this.overHeatTime;
+    this.coolRate = this.heatBarMaxW / this.coolDownTime;
+    this.triggerOnTime = null;
+    this.triggerOffTime = null;
+    this.disableStartTime = null;
+    this.triggerOn = function(){
+        if(!this.disabled){
+            this.triggerOffTime = null;
+            if(!this.triggerOnTime){ this.triggerOnTime = Date.now(); }
+            var dur = Date.now() - this.triggerOnTime;
+            this.heatBarW += (dur*this.heatRate);
+            this.triggerOnTime = Date.now();
+            if(this.heatBarW >= this.heatBarMaxW){
+                this.disabled = true;
+                this.disableStartTime = Date.now();
+                this.heatBarW = this.heatBarMaxW;
+            }
+        }
+        else{
+            this.triggerOff();
+        }
+    };
+    this.triggerOff = function(){
+        this.triggerOnTime = null;
+        if(!this.triggerOffTime){ this.triggerOffTime = Date.now(); }
+        var dur = Date.now() - this.triggerOffTime;
+        this.heatBarW -= (dur*this.coolRate);
+        this.triggerOffTime = Date.now();
+        if(this.heatBarW <= 0){ this.disabled = false; this.heatBarW = 0; };
+    };
+    this.checkDisableDur = function(){
+        var dur = (this.coolDownTime-(Date.now() - this.disableStartTime))/1000;
+        if(dur < 0){ dur = 0; }
+        return dur.toFixed(1);
+    };
+    this.checkDisableRatio = function(){
+        var ratio = ((Date.now() - this.disableStartTime))/this.coolDownTime;
+        if(ratio >= 1){ ratio = 1; }
+        return ratio;
+    };
+    this.resetHeat = function(){
+        this.heatBarW = 0;
+    };
 }
 function WeaponPProjectileB(name, type, lvl, icon, cost, dmg, interval, spd, clr){
     Weapon.call(this, name, type, lvl, icon, cost);
@@ -797,6 +863,7 @@ function ProfileMenu(){
         if(profileManager.profileArray[this.selectedProfile]){
             if(window.confirm("Delete profile:" + p.name + " permanantly?")){
                 profileManager.deleteProfile(this.selectedProfile);
+                this.inputString = "";
             }
         }
     };
@@ -1320,6 +1387,11 @@ function PreGame(){
             }
         }
     };
+    this.reset = function(){
+        this.msg = "READY?";
+        this.rectBarTopY = -80*sizeManager.factor;
+        this.rectBarBtmY = canvas.height;
+    };
 }
 //PRE GAME ANIMATION
 function drawPreGame(){
@@ -1348,6 +1420,13 @@ function GameUI(){
     this.barHeight = 80*sizeManager.factor;
     this.gameAreaYTop = 80*sizeManager.factor;
     this.gameAreaYBtm = 80*sizeManager.factor + canvas.height - (160*sizeManager.factor);
+    this.rectBarX = [25*sizeManager.factor, 175*sizeManager.factor, 400*sizeManager.factor];
+    this.rectBarY = 794*sizeManager.factor;
+    this.rectBarH = 4*sizeManager.factor;
+    this.circleX =[75*sizeManager.factor, 225*sizeManager.factor, 450*sizeManager.factor];
+    this.circleY = 760*sizeManager.factor;
+    this.circleR = 25*sizeManager.factor;
+    this.circleTxtY = 765*sizeManager.factor;
     
     //AVATAR MOVMENT
     this.up = false;
@@ -1357,12 +1436,44 @@ function GameUI(){
     this.fire = false;
     this.fireS = false;
     
+    this.resetUI = function(){
+        this.up = false;
+        this.down = false;
+        this.left = false;
+        this.right = false;
+        this.fire = false;
+        this.fireS = false;
+    };
+    
     this.drawInventory = function(){
         //Primary
-        if(avatar.loadout[0]){ ctx.drawImage(avatar.loadout[0].icon, 50*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor); }
-        if(avatar.loadout[1]){ ctx.drawImage(avatar.loadout[1].icon, 200*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor); }
+        if(avatar.loadout[0]){
+            ctx.drawImage(avatar.loadout[0].icon, 50*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor);
+            
+        }
+        if(avatar.loadout[1]){
+            ctx.drawImage(avatar.loadout[1].icon, 200*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor);
+            
+        }
         //Secondary
         if(avatar.loadout[2]){ ctx.drawImage(avatar.loadout[2].icon, 425*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor); }
+        //OVERHEAT BAR AND COOLDOWN
+        for(var i = 0 ; i < avatar.loadout.length ; i++){
+            //BAR
+            if(avatar.loadout[i] && avatar.loadout[i].heatBarW > 0){
+                var tx = this.rectBarX[i] + avatar.loadout[i].heatBarW;
+                ctxTool.line(this.rectBarX[i], this.rectBarY, tx, this.rectBarY, this.rectBarH, ctxTool.clrRed2);
+            }
+            //COOLDOWN
+            if(avatar.loadout[i] && avatar.loadout[i].disabled){
+                var dur = avatar.loadout[i].checkDisableDur();
+                var arc = Math.PI*(avatar.loadout[i].checkDisableRatio()*2 + 1.5);
+                ctxTool.circle(this.circleX[i], this.circleY, this.circleR, ctxTool.clrRedT);
+                ctxTool.arc(this.circleX[i], this.circleY, this.circleR, arc, ctxTool.clrRedT);
+                ctxTool.text(dur, this.circleX[i], this.circleTxtY, "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
+            }
+        }
+        
         //Selection
         if(avatar.activeWeaponIndex === 0){ ctxTool.strokeRect(50*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor, 4*sizeManager.factor, ctxTool.clrRed); }
         if(avatar.activeWeaponIndex === 1){ ctxTool.strokeRect(200*sizeManager.factor, 735*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor, 4*sizeManager.factor, ctxTool.clrRed); }
@@ -1570,6 +1681,13 @@ function drawGame(){
     ctx.drawImage(gameUI.bg, 0, 0, canvas.width, canvas.height);
     //AVATAR
     gameUI.drawAvatar();
+    //TRIGGER WEAPON / COOLDOWN
+    for(var i = 0 ; i < 2 ; i++){
+        if(avatar.loadout[i]){
+            if(i === avatar.activeWeaponIndex && gameUI.fire){ avatar.loadout[i].triggerOn(); }
+            else{ avatar.loadout[i].triggerOff(); }
+        }
+    }
     //PROJECTILE
     
     //ENEMY
@@ -1655,11 +1773,21 @@ function CtxTool(){
     this.clrWhite = "#ffffff";
     this.clrGrey = "#4a4a4a";
     this.clrRed = "#9c1919";
+    this.clrRed2 = "#ff0000";
+    this.clrRedT = "rgba(156, 25, 25, 0.5)";
     this.clrYellow = "#ffff00";
     this.circle = function(x,y,r,clr){
         ctx.beginPath();
         ctx.fillStyle = clr;
         ctx.arc(x, y, r, 0, Math.PI*2, false);
+        ctx.fill();
+        ctx.closePath();
+    };
+    this.arc = function(x,y,r,arc,clr){
+        ctx.beginPath();
+        ctx.fillStyle = clr;
+        ctx.arc(x, y, r, Math.PI*1.5, arc, true);
+        ctx.lineTo(x,y);
         ctx.fill();
         ctx.closePath();
     };
@@ -1702,13 +1830,14 @@ function UI(){
     this.avatarTargetY;
     
     //KEYBOARD
-    this.keyDown = function(keyCode){
+    this.keyDown = function(keyCode, key){
         switch(gameManager.gameState){
             case 0:
                 break;
             case 1:
                 break;
             case 2:
+                profileMenu.manageInput(key);
                 break;
             case 3:
                 break;
@@ -1730,7 +1859,6 @@ function UI(){
             case 1:
                 break;
             case 2:
-                profileMenu.manageInput(key);
                 break;
             case 3:
                 break;
@@ -1818,7 +1946,7 @@ function UI(){
     this.addEventListeners = function(){
         //KEYBOARD
         document.addEventListener("keydown", function(event){
-            ui.keyDown(event.keyCode);
+            ui.keyDown(event.keyCode, event.key);
         });
         document.addEventListener("keyup", function(event){
             ui.keyUp(event.keyCode, event.key);
