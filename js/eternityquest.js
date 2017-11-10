@@ -29,6 +29,7 @@ var inventoryMenu;
 
 var weaponManager;
 var weaponType;
+var projectileManager;
 
 var preGame;
 
@@ -54,6 +55,9 @@ function init(){
     
     //FIRST DRAW
     draw();
+    
+    //CTX TOOL
+    ctxTool = new CtxTool();
     
     assetManager = new AssetManager();
     
@@ -86,6 +90,7 @@ function init(){
     assetManager.addAsset(inventoryMenu.bgShop, "img/eternityquest/bg-inventory-shop.png");
     assetManager.addAsset(inventoryMenu.btnLoadout, "img/eternityquest/btn-loadout.png");
     
+    //WEAPONS
     weaponType = {
         PROJECTILE_BASIC: 0,
         PROJECTILE_SP: 1,
@@ -102,6 +107,8 @@ function init(){
     assetManager.addAsset(weaponManager.icon.laser, "img/eternityquest/laser.png");
     weaponManager.sprites.fireball = weaponManager.icon.fireball;
     weaponManager.initWeapons();
+    //PROJECTILES
+    projectileManager = new ProjectileManager();
     
     avatar = new Avatar();
     avatar.sprite = new Image();
@@ -153,9 +160,6 @@ function init(){
     //LOAD COOKIES / SETTINGS
     cookieManager = new CookieManager();
     settings = new Settings();
-    
-    //CTX TOOL
-    ctxTool = new CtxTool();
     
     //UI EVENT LISTENERS
     ui = new UI();
@@ -220,6 +224,7 @@ function GameManager(){
         //RESET 
         avatar.coolDownReset();
         weaponManager.resetAllWeaponCoolDown();
+        projectileManager.reset();
         enemyManager.reset();
         explosionManager.reset();
         preGame.reset();
@@ -420,6 +425,13 @@ function Avatar(){
     this.msX;
     this.msY;
     
+    this.ax = function(){
+        return this.x + this.width/2;
+    };
+    this.ay = function(){
+        return this.y + this.height/2;
+    };
+    
     this.name;
     this.score;
     this.highScore;
@@ -527,14 +539,14 @@ function WeaponManager(){
                 [0, 300, 500, 750, 1000, 1500], //COST
                 [0, 5, 10, 15, 20, 25], //DMG
                 [0, 100, 90, 80, 70, 60], //INTERVAL
-                10, "red" //SPD // CLR
+                10*sizeManager.factor, 5*sizeManager.factor, ctxTool.clrRed2 //SPD //RADIUS // CLR
             ),
             new WeaponPProjectileSP("Fireball", weaponType.PROJECTILE_SP, 0,
                 this.icon.fireball, 
                 [500, 500, 750, 1000, 1300, 1800], //COST
                 [0, 25, 35, 55, 75, 100], //DMG
                 [0, 200, 190, 180, 175, 150], //INTERVAL
-                10, this.sprites.fireball, 30, 50 //SPD //SPRITE //WIDTH //HEIGHT
+                10*sizeManager.factor, this.sprites.fireball, 30, 50 //SPD //SPRITE //WIDTH //HEIGHT
             ),
             new WeaponPBeam("Laser", weaponType.BEAM, 0,
                 this.icon.laser, 
@@ -573,6 +585,7 @@ function Weapon(name, type, lvl, icon, cost){
     this.disableStartTime = null;
     this.triggerOn = function(){
         if(!this.disabled){
+            this.triggerWeapon();
             this.triggerOffTime = null;
             if(!this.triggerOnTime){ this.triggerOnTime = Date.now(); }
             var dur = Date.now() - this.triggerOnTime;
@@ -609,13 +622,38 @@ function Weapon(name, type, lvl, icon, cost){
     this.resetHeat = function(){
         this.heatBarW = 0;
     };
+    this.triggerWeapon = function(){
+        switch(this.type){
+            case weaponType.PROJECTILE_BASIC:
+            case weaponType.PROJECTILE_SP:
+                if(!this.lastProjectileTime){ this.lastProjectileTime = Date.now();}
+                if(Date.now() > (this.lastProjectileTime + this.interval[this.lvl])){
+                    var p;
+                    if(this.type === weaponType.PROJECTILE_BASIC){
+                        p = new ProjectileBasic(avatar.ax(), avatar.ay(), this.spd, this.r, this.clr);
+                    }
+                    else if(this.type === weaponType.PROJECTILE_SP){
+                        p = new ProjectileSP(avatar.ax(), avatar.ay(), this.spd, this.sprite, this.width, this.height);
+                    }
+                    projectileManager.projectileArray.push(p);
+                    this.lastProjectileTime = Date.now();
+                }
+                break;
+            case weaponType.BEAM:
+                break;
+            case weaponType.SECONDARY:
+                break;
+        }
+    };
 }
-function WeaponPProjectileB(name, type, lvl, icon, cost, dmg, interval, spd, clr){
+function WeaponPProjectileB(name, type, lvl, icon, cost, dmg, interval, spd, r, clr){
     Weapon.call(this, name, type, lvl, icon, cost);
     this.dmg = dmg;
     this.interval = interval;
     this.spd = spd;
+    this.r = r;
     this.clr = clr;
+    this.lastProjectileTime = null;
 }
 function WeaponPProjectileSP(name, type, lvl, icon, cost, dmg, interval, spd, sprite, width, height){
     WeaponPProjectileB.call(this, name, type, lvl, icon, cost, dmg, interval, spd);
@@ -634,8 +672,11 @@ function WeaponS(name, type, lvl, icon, cost){
 }
 
 //PROJECTILE MANAGER
-function ProjectilManager(){
+function ProjectileManager(){
     this.projectileArray = [];
+    this.reset = function(){
+        this.projectileArray = [];
+    };
 }
 //PROJECTILE OBJ
 function Projectile(x, y, ms){
@@ -1097,7 +1138,7 @@ function InventoryMenu(){
         if(this.tab === 1){
             weapon = weaponManager.weaponArrayP[this.selection];
             weapon.lvl = avatar.inventoryP[this.selection];
-            if(weapon.cost[weapon.lvl] < avatar.gold && weapon.lvl < weapon.maxLvl){
+            if(weapon.cost[weapon.lvl] <= avatar.gold && weapon.lvl < weapon.maxLvl){
                 avatar.inventoryP[this.selection]++;
                 avatar.gold -= weapon.cost[weapon.lvl];
                 profileManager.updateProfile();
@@ -1106,7 +1147,7 @@ function InventoryMenu(){
         else{
             weapon = weaponManager.weaponArrayS[this.selection];
             weapon.lvl = avatar.inventoryS[this.selection];
-            if(weapon.cost[weapon.lvl] < avatar.gold && weapon.lvl < weapon.maxLvl){
+            if(weapon.cost[weapon.lvl] <= avatar.gold && weapon.lvl < weapon.maxLvl){
                 avatar.inventoryS[this.selection]++;
                 avatar.gold -= weapon.cost[weapon.lvl];
                 profileManager.updateProfile();
@@ -1604,6 +1645,17 @@ function GameUI(){
             }
         }
     };
+    this.drawWeaponEffect = function(){
+        for(var i= 0 ; i < projectileManager.projectileArray.length ; i++){
+            switch(avatar.loadout[avatar.activeWeaponIndex].type){
+                case weaponType.PROJECTILE_BASIC:
+                    var p = projectileManager.projectileArray[i];
+                    p.y -= p.ms;
+                    ctxTool.circle(p.x, p.y, p.r, p.clr);
+                    break;
+            }
+        }
+    };
     
     this.keyDown = function(keyCode){
         switch(keyCode){
@@ -1688,7 +1740,8 @@ function drawGame(){
             else{ avatar.loadout[i].triggerOff(); }
         }
     }
-    //PROJECTILE
+    //PROJECTILE//Beam//EFFECT
+    gameUI.drawWeaponEffect();
     
     //ENEMY
     gameUI.drawEnemy();
