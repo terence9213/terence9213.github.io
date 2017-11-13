@@ -537,6 +537,8 @@ function WeaponManager(){
             new WeaponPProjectileB("Blaster", weaponType.PROJECTILE_BASIC, 0,
                 this.icon.blaster, 
                 [0, 300, 500, 750, 1000, 1500], //COST
+                [0, 1000, 1500, 2000, 2500, 3200], //OVER HEAT
+                [0, 2000, 2000, 1800, 1700, 1500], //COOL DOWN
                 [0, 5, 10, 15, 20, 25], //DMG
                 [0, 100, 90, 80, 70, 60], //INTERVAL
                 10*sizeManager.factor, 5*sizeManager.factor, ctxTool.clrRed2 //SPD //RADIUS // CLR
@@ -544,6 +546,8 @@ function WeaponManager(){
             new WeaponPProjectileSP("Fireball", weaponType.PROJECTILE_SP, 0,
                 this.icon.fireball, 
                 [500, 500, 750, 1000, 1300, 1800], //COST
+                [0, 1000, 1250, 1600, 2000, 2700], //OVER HEAT
+                [0, 2000, 1950, 1800, 1700, 1600], //COOL DOWN
                 [0, 25, 35, 55, 75, 100], //DMG
                 [0, 200, 190, 180, 175, 150], //INTERVAL
                 10*sizeManager.factor, this.sprites.fireball, //SPD //SPRITE
@@ -552,8 +556,11 @@ function WeaponManager(){
             new WeaponPBeam("Laser", weaponType.BEAM, 0,
                 this.icon.laser, 
                 [1500, 800, 1200, 1700, 2300, 3000], //COST
+                [0, 1000, 1500, 2200, 3000, 4000], //OVER HEAT
+                [0, 2000, 2000, 2000, 2000, 1800], //COOL DOWN
                 [0, 5, 10, 15, 20, 25], //TICK DMG
-                [0, 120, 110, 100, 90, 80] //INTERVAL
+                [0, 120, 110, 100, 90, 80], //INTERVAL
+                2,5,ctxTool.clrRed2 //WIDTH-BASE //WIDTH-TICK //CLR
             )
         ];
         this.weaponArrayS = [
@@ -567,7 +574,7 @@ function WeaponManager(){
         }
     };
 }
-function Weapon(name, type, lvl, icon, cost){
+function Weapon(name, type, lvl, icon, cost, oh, cd){
     this.name = name;
     this.type = type;
     this.lvl = lvl;
@@ -577,10 +584,10 @@ function Weapon(name, type, lvl, icon, cost){
     this.disabled = false;
     this.heatBarMaxW = 100*sizeManager.factor;
     this.heatBarW = 0;
-    this.overHeatTime = 1000;
-    this.coolDownTime = 2000;
-    this.heatRate = this.heatBarMaxW / this.overHeatTime;
-    this.coolRate = this.heatBarMaxW / this.coolDownTime;
+    this.overHeatTime = oh;
+    this.coolDownTime = cd;
+    this.heatRate = function(){ return this.heatBarMaxW / this.overHeatTime[this.lvl]; };
+    this.coolRate = function(){ return this.heatBarMaxW / this.coolDownTime[this.lvl]; };
     this.triggerOnTime = null;
     this.triggerOffTime = null;
     this.disableStartTime = null;
@@ -590,7 +597,7 @@ function Weapon(name, type, lvl, icon, cost){
             this.triggerOffTime = null;
             if(!this.triggerOnTime){ this.triggerOnTime = Date.now(); }
             var dur = Date.now() - this.triggerOnTime;
-            this.heatBarW += (dur*this.heatRate);
+            this.heatBarW += (dur*this.heatRate());
             this.triggerOnTime = Date.now();
             if(this.heatBarW >= this.heatBarMaxW){
                 this.disabled = true;
@@ -604,19 +611,20 @@ function Weapon(name, type, lvl, icon, cost){
     };
     this.triggerOff = function(){
         this.triggerOnTime = null;
+        this.triggerOffWeapon();
         if(!this.triggerOffTime){ this.triggerOffTime = Date.now(); }
         var dur = Date.now() - this.triggerOffTime;
-        this.heatBarW -= (dur*this.coolRate);
+        this.heatBarW -= (dur*this.coolRate());
         this.triggerOffTime = Date.now();
         if(this.heatBarW <= 0){ this.disabled = false; this.heatBarW = 0; };
     };
     this.checkDisableDur = function(){
-        var dur = (this.coolDownTime-(Date.now() - this.disableStartTime))/1000;
+        var dur = (this.coolDownTime[this.lvl]-(Date.now() - this.disableStartTime))/1000;
         if(dur < 0){ dur = 0; }
         return dur.toFixed(1);
     };
     this.checkDisableRatio = function(){
-        var ratio = ((Date.now() - this.disableStartTime))/this.coolDownTime;
+        var ratio = ((Date.now() - this.disableStartTime))/this.coolDownTime[this.lvl];
         if(ratio >= 1){ ratio = 1; }
         return ratio;
     };
@@ -641,14 +649,33 @@ function Weapon(name, type, lvl, icon, cost){
                 }
                 break;
             case weaponType.BEAM:
+                this.origin = [avatar.ax(), avatar.ay()];
+                if(!this.lastTickTime){ this.lastTickTime = Date.now() - this.tickInterval[this.lvl]; }
+                if(Date.now() > this.lastTickTime + this.tickInterval[this.lvl]){
+                    this.tick = true;
+                    this.lastTickTime = Date.now();
+                }else{ this.tick = false; }
+                break;
+            case weaponType.SECONDARY:
+                break;
+        }
+    };
+    this.triggerOffWeapon = function(){
+        switch(this.type){
+            case weaponType.PROJECTILE_BASIC:
+            case weaponType.PROJECTILE_SP:
+                break;
+            case weaponType.BEAM:
+                this.tick = false;
+                this.origin = null;
                 break;
             case weaponType.SECONDARY:
                 break;
         }
     };
 }
-function WeaponPProjectileB(name, type, lvl, icon, cost, dmg, interval, spd, r, clr){
-    Weapon.call(this, name, type, lvl, icon, cost);
+function WeaponPProjectileB(name, type, lvl, icon, cost, oh, cd, dmg, interval, spd, r, clr){
+    Weapon.call(this, name, type, lvl, icon, cost, oh, cd);
     this.dmg = dmg;
     this.interval = interval;
     this.spd = spd;
@@ -656,16 +683,25 @@ function WeaponPProjectileB(name, type, lvl, icon, cost, dmg, interval, spd, r, 
     this.clr = clr;
     this.lastProjectileTime = null;
 }
-function WeaponPProjectileSP(name, type, lvl, icon, cost, dmg, interval, spd, sprite, width, height){
-    WeaponPProjectileB.call(this, name, type, lvl, icon, cost, dmg, interval, spd);
+function WeaponPProjectileSP(name, type, lvl, icon, cost, oh, cd, dmg, interval, spd, sprite, width, height){
+    WeaponPProjectileB.call(this, name, type, lvl, icon, cost, oh, cd, dmg, interval, spd);
     this.sprite = sprite;
     this.spriteWidth = width;
     this.spriteHeight = height;
 }
-function WeaponPBeam(name, type, lvl, icon, cost, tickDmg, tickInterval){
-    Weapon.call(this, name, type, lvl, icon, cost);
+function WeaponPBeam(name, type, lvl, icon, cost, oh, cd, tickDmg, tickInterval, width, widthTick, clr){
+    Weapon.call(this, name, type, lvl, icon, cost, oh, cd);
     this.tickDmg = tickDmg;
     this.tickInterval = tickInterval;
+    this.width = width;
+    this.widthTick = widthTick;
+    this.clr = clr;
+    this.tick = false;
+    this.lastTickTime = null;
+    this.origin = null;
+    this.beamCoordinates = function(){
+        return [this.origin[0]-this.widthTick/2, 0, this.widthTick, this.origin[1]];
+    };
 }
 function WeaponS(name, type, lvl, icon, cost){
     Weapon.call(this, name, type, lvl, icon, cost);
@@ -697,6 +733,9 @@ function ProjectileSprite(x, y, ms, dmg, sprite, w, h){
     this.sprite = sprite;
     this.width = w;
     this.height = h;
+    this.offsetX = function(){
+        return this.x + (sizeManager.spriteWidth-this.width)/2;
+    };
 }
 
 //ENEMY MANAGER
@@ -1117,7 +1156,7 @@ function InventoryMenu(){
     this.rectItmW = 100*sizeManager.factor;
     this.rectInfo = [104*sizeManager.factor, 424*sizeManager.factor];
     this.rectTxtX = 220*sizeManager.factor;
-    this.rectTxtY = [434*sizeManager.factor, 460*sizeManager.factor, 485*sizeManager.factor, 510*sizeManager.factor, 535*sizeManager.factor];
+    this.rectTxtY = [434*sizeManager.factor, 460*sizeManager.factor, 485*sizeManager.factor, 510*sizeManager.factor, 535*sizeManager.factor, 560*sizeManager.factor];
     this.rectLoad = [104*sizeManager.factor, 630*sizeManager.factor, 308*sizeManager.factor, 100*sizeManager.factor];
     this.rectLoadX = [104*sizeManager.factor, 208*sizeManager.factor, 312*sizeManager.factor];
     this.rectLoadY = 630*sizeManager.factor;
@@ -1135,7 +1174,7 @@ function InventoryMenu(){
     this.rectShopBack = [425*sizeManager.factor, 175*sizeManager.factor, 50*sizeManager.factor, 50*sizeManager.factor];
     this.rectShopIcon = [250*sizeManager.factor, 250*sizeManager.factor];
     this.rectShopTxtX = 300*sizeManager.factor;
-    this.rectShopTxtY = [215*sizeManager.factor, 420*sizeManager.factor, 455*sizeManager.factor, 480*sizeManager.factor, 505*sizeManager.factor];
+    this.rectShopTxtY = [215*sizeManager.factor, 420*sizeManager.factor, 455*sizeManager.factor, 480*sizeManager.factor, 505*sizeManager.factor, 530*sizeManager.factor, 555*sizeManager.factor];
     this.rectShopBtn = [246*sizeManager.factor, 580*sizeManager.factor, 108*sizeManager.factor, 40*sizeManager.factor];
     this.rectShopBtnTxt = [300*sizeManager.factor, 605*sizeManager.factor];
     this.shopEvent = function(){
@@ -1264,6 +1303,12 @@ function drawInventoryMenu(){
                         break;
                 }
                 //ctxTool.text("" + weapon.desc + "", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[3],"left", sizeManager.fontSizeXS, ctxTool.clrRed);
+                //OVERHEAT
+                ctxTool.text("Overheat: " + weapon.overHeatTime[weapon.lvl]/1000 + "s", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[4], 
+                "left", sizeManager.fontSizeXS, ctxTool.clrRed);
+                //COOLDOWN
+                ctxTool.text("CoolDown: " + weapon.coolDownTime[weapon.lvl]/1000 + "s", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[5], 
+                "left", sizeManager.fontSizeXS, ctxTool.clrRed);
             }
         }
         //LOADOUT
@@ -1304,6 +1349,7 @@ function drawInventoryMenu(){
                 "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
                 weapon.lvl = avatar.inventoryP[inventoryMenu.selection];
                 var btnTxt = "UPGRADE";
+                //WEAPON INFO
                 if(weapon.lvl <= 0){
                     btnTxt = "BUY"; weapon.lvl = 1;
                     switch(weapon.type){
@@ -1325,6 +1371,12 @@ function drawInventoryMenu(){
                             "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
                             break;
                     }
+                    //OVERHEAT
+                    ctxTool.text("Overheat: " + weapon.overHeatTime[weapon.lvl]/1000 + "s", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[5], 
+                    "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                    //COOLDOWN
+                    ctxTool.text("CoolDown: " + weapon.coolDownTime[weapon.lvl]/1000 + "s", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[6], 
+                    "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
                 }
                 else{
                     switch(weapon.type){
@@ -1354,6 +1406,16 @@ function drawInventoryMenu(){
                             "left", sizeManager.fontSizeXS, ctxTool.clrRed);
                             break;
                     }
+                    //OVERHEAT
+                    ctxTool.text("Overheat: " + weapon.overHeatTime[weapon.lvl]/1000 + "s", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[5], 
+                    "right", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                    ctxTool.text(" -> " + weapon.overHeatTime[weapon.lvl+1]/1000 + "s", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[5], 
+                    "left", sizeManager.fontSizeXS, ctxTool.clrRed);
+                    //COOLDOWN
+                    ctxTool.text("CoolDown: " + weapon.coolDownTime[weapon.lvl]/1000 + "s", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[6], 
+                    "right", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                    ctxTool.text(" -> " + weapon.coolDownTime[weapon.lvl+1]/1000 + "s", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[6], 
+                    "left", sizeManager.fontSizeXS, ctxTool.clrRed);
                 }
                 //BTN TXT
                 ctxTool.text(btnTxt, inventoryMenu.rectShopBtnTxt[0], inventoryMenu.rectShopBtnTxt[1],
@@ -1594,7 +1656,7 @@ function GameUI(){
                 enemyManager.enemyArray.splice(i,1);
                 i--;
             }
-            //ELSE CHECK PROJECTILE COLLISION // AVATAR COLLISION
+            //ELSE CHECK PROJECTILE COLLISION // BEAM COLLISION // AVATAR COLLISION
             else{
                 //PROJECTILE COLLISION
                 for(var j = 0 ; j < projectileManager.projectileArray.length ; j++){
@@ -1608,7 +1670,7 @@ function GameUI(){
                             }
                             break;
                         case weaponType.PROJECTILE_SP:
-                            if(ctxTool.objObjCollision([e.x,e.y,e.width,e.height],[p.x,p.y, p.width, p.height])){
+                            if(ctxTool.objObjCollision([e.x,e.y,e.width,e.height],[p.offsetX(),p.y, p.width, p.height])){
                                 projectileManager.projectileArray.splice(j,1);
                                 j--;
                                 e.hp -= p.dmg;
@@ -1620,6 +1682,15 @@ function GameUI(){
                     avatar.score += 1;
                     enemyManager.enemyDeathArray.push(enemyManager.enemyArray.splice(i,1)[0]);
                     explosionManager.explosionArray.push(new Explosion(e.x, e.y));
+                }
+                //BEAM COLLISION
+                var w = avatar.loadout[avatar.activeWeaponIndex];
+                if(w && w.type === weaponType.BEAM){
+                    if(w.tick){
+                        if(ctxTool.objObjCollision([e.x,e.y,e.width,e.height], w.beamCoordinates())){
+                            e.hp -= w.tickDmg[w.lvl];
+                        }
+                    }
                 }
                 //AVATAR COLLISION
                 if(!avatar.godMode){
@@ -1672,6 +1743,7 @@ function GameUI(){
         }
     };
     this.drawWeaponEffect = function(){
+        //DRAW PROJECTILES
         for(var i= 0 ; i < projectileManager.projectileArray.length ; i++){
             var p = projectileManager.projectileArray[i];
             //POSITION / MOVEMENT
@@ -1690,6 +1762,16 @@ function GameUI(){
             if(p.y < 0){
                 projectileManager.projectileArray.splice(i,1);
                 i--;
+            }
+        }
+        //DRAW BEAM
+        var w = avatar.loadout[avatar.activeWeaponIndex];
+        if(w && w.type === weaponType.BEAM){
+            if(w.origin){
+                var bw;
+                if(w.tick){ bw = w.widthTick; }
+                else{ bw = w.width; }
+                ctxTool.line(w.origin[0], w.origin[1], w.origin[0], 0, bw, w.clr);
             }
         }
     };
@@ -1866,6 +1948,7 @@ function CtxTool(){
     this.clrRed2 = "#ff0000";
     this.clrRedT = "rgba(156, 25, 25, 0.5)";
     this.clrYellow = "#ffff00";
+    this.clrBlue = "#0078f8";
     this.circle = function(x,y,r,clr){
         ctx.beginPath();
         ctx.fillStyle = clr;
