@@ -99,12 +99,16 @@ function init(){
     };
     weaponManager = new WeaponManager();
     weaponManager.icon.blaster = new Image();
+    weaponManager.icon.gatling = new Image();
     weaponManager.icon.fireball = new Image();
     weaponManager.icon.laser = new Image();
+    weaponManager.icon.ray = new Image();
     weaponManager.sprites.fireball = new Image();
     assetManager.addAsset(weaponManager.icon.blaster, "img/eternityquest/blaster.png");
+    assetManager.addAsset(weaponManager.icon.gatling, "img/eternityquest/gatling.png");
     assetManager.addAsset(weaponManager.icon.fireball, "img/eternityquest/fireball.png");
     assetManager.addAsset(weaponManager.icon.laser, "img/eternityquest/laser.png");
+    assetManager.addAsset(weaponManager.icon.ray, "img/eternityquest/ray.png");
     weaponManager.sprites.fireball = weaponManager.icon.fireball;
     weaponManager.initWeapons();
     //PROJECTILES
@@ -524,8 +528,10 @@ function Avatar(){
 function WeaponManager(){
     this.icon = {
         blaster: null,
+        gatling: null,
         fireball: null,
-        laser: null
+        laser: null,
+        ray: null
     };
     this.sprites = {
         fireball: null
@@ -542,6 +548,15 @@ function WeaponManager(){
                 [0, 5, 10, 15, 20, 25], //DMG
                 [0, 100, 90, 80, 70, 60], //INTERVAL
                 10*sizeManager.factor, 5*sizeManager.factor, ctxTool.clrRed2 //SPD //RADIUS // CLR
+            ),
+            new WeaponPProjectileB("Gatling Gun", weaponType.PROJECTILE_BASIC, 0,
+                this.icon.gatling, 
+                [500, 500, 800, 800, 1000, 1500], //COST
+                [0, 3000, 4500, 4500, 5000, 5000], //OVER HEAT
+                [0, 2000, 1800, 1500, 1200, 1000], //COOL DOWN
+                [0, 2, 3, 10, 10, 10], //DMG
+                [0, 50, 50, 40, 30, 25], //INTERVAL
+                12*sizeManager.factor, 3*sizeManager.factor, ctxTool.clrBlue //SPD //RADIUS // CLR
             ),
             new WeaponPProjectileSP("Fireball", weaponType.PROJECTILE_SP, 0,
                 this.icon.fireball, 
@@ -561,6 +576,15 @@ function WeaponManager(){
                 [0, 5, 10, 15, 20, 25], //TICK DMG
                 [0, 120, 110, 100, 90, 80], //INTERVAL
                 2,5,ctxTool.clrRed2 //WIDTH-BASE //WIDTH-TICK //CLR
+            ),
+            new WeaponPBeam("Ray of Void", weaponType.BEAM, 0,
+                this.icon.ray, 
+                [2000, 1000, 1500, 2000, 2500, 3300], //COST
+                [0, 4000, 4000, 4500, 5000, 5000], //OVER HEAT
+                [0, 5000, 4500, 4000, 3000, 2000], //COOL DOWN
+                [0, 10, 20, 35, 50, 80], //TICK DMG
+                [0, 100, 100, 90, 80, 70], //INTERVAL
+                3,6,ctxTool.clrBlue //WIDTH-BASE //WIDTH-TICK //CLR
             )
         ];
         this.weaponArrayS = [
@@ -986,8 +1010,7 @@ function drawProfileMenu(){
             ctxTool.text(p.name, 190*sizeManager.factor, textY, "left", sizeManager.fontSizeS, ctxTool.clrBlack);
         }
         else{
-            ctx.textAlign = "center";
-            ctx.fillText("EMPTY SLOT", canvas.width/2, textY);
+            ctxTool.text("EMPTY SLOT", canvas.width/2, textY, "center", sizeManager.fontSizeS, ctxTool.clrBlack);
         }
         textY += 125*sizeManager.factor;
     }
