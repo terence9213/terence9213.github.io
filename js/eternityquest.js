@@ -611,8 +611,8 @@ function WeaponManager(){
             new WeaponS("Shield", weaponType.SECONDARY, 0,
                 this.icon.shield,
                 [1100, 800, 900, 1000, 1200],
-                [0, 0, 0, 0, 0, 0], //OVER HEAT
-                [0, 5000, 4500, 4000, 3000, 2000], //COOL DOWN
+                [0, 5000, 5000, 5000, 5000, 5000], //OVER HEAT
+                [0, 20000, 20000, 20000, 20000, 20000], //COOL DOWN
                 function(){}, //TRIGGER ON
                 function(){} //TRIGGER OFF
             )
@@ -728,6 +728,7 @@ function Weapon(name, type, lvl, icon, cost, oh, cd){
                 this.origin = null;
                 break;
             case weaponType.SECONDARY:
+                this.triggerOffS();
                 break;
         }
     };
@@ -761,10 +762,11 @@ function WeaponPBeam(name, type, lvl, icon, cost, oh, cd, tickDmg, tickInterval,
         return [this.origin[0]-this.widthTick/2, 0, this.widthTick, this.origin[1]];
     };
 }
-function WeaponS(name, type, lvl, icon, cost, oh, cd, dmg, triggerOnS){
+function WeaponS(name, type, lvl, icon, cost, oh, cd, dmg, triggerOnS, triggerOffS){
     Weapon.call(this, name, type, lvl, icon, cost, oh, cd);
     this.dmg = dmg;
     this.triggerOnS = triggerOnS;
+    this.triggerOffS = triggerOffS;
 }
 
 //PROJECTILE MANAGER
@@ -1402,8 +1404,11 @@ function drawInventoryMenu(){
     //CHECK SHOP WINDOW
     if(inventoryMenu.shopWindow){
         ctx.drawImage(inventoryMenu.bgShop, 0, 0, canvas.width, canvas.height);
-        //CHECK TAB
+        //DRAW INFO
         if(weapon){
+            //CHECK TAB
+            if(inventoryMenu.tab === 1){ weapon.lvl = avatar.inventoryP[inventoryMenu.selection]; }
+            else{ weapon.lvl = avatar.inventoryS[inventoryMenu.selection]; }
             //ICON
             ctx.drawImage(weapon.icon, inventoryMenu.rectShopIcon[0], inventoryMenu.rectShopIcon[0], 
             inventoryMenu.rectItmW, inventoryMenu.rectItmW);
@@ -1416,7 +1421,7 @@ function drawInventoryMenu(){
             //LVL
             ctxTool.text("Lvl: " + weapon.lvl, inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[2], 
             "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
-            weapon.lvl = avatar.inventoryP[inventoryMenu.selection];
+            
             var btnTxt = "UPGRADE";
             //WEAPON INFO
             if(weapon.lvl <= 0){
@@ -1929,7 +1934,7 @@ function drawGame(){
     }
     //TRIGGER SECONDARY WEAPON
     if(avatar.loadout[2] && gameUI.fireS){ avatar.loadout[2].triggerOn(); }
-    else{ avatar.loadout[2].triggerOff(); }
+    else if(avatar.loadout[2] && !gameUI.fireS){ avatar.loadout[2].triggerOff(); }
     
     //PROJECTILE//Beam//EFFECT
     gameUI.drawWeaponEffect();
