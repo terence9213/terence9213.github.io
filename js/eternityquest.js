@@ -106,6 +106,7 @@ function init(){
     weaponManager.icon.emp = new Image();
     weaponManager.icon.shield = new Image();
     weaponManager.sprites.fireball = new Image();
+    weaponManager.sprites.shield = new Image();
     assetManager.addAsset(weaponManager.icon.blaster, "img/eternityquest/blaster.png");
     assetManager.addAsset(weaponManager.icon.gatling, "img/eternityquest/gatling.png");
     assetManager.addAsset(weaponManager.icon.fireball, "img/eternityquest/fireball.png");
@@ -113,6 +114,7 @@ function init(){
     assetManager.addAsset(weaponManager.icon.ray, "img/eternityquest/ray.png");
     assetManager.addAsset(weaponManager.icon.emp, "img/eternityquest/emp.png");
     assetManager.addAsset(weaponManager.icon.shield, "img/eternityquest/shield.png");
+    assetManager.addAsset(weaponManager.sprites.shield, "img/eternityquest/shield-effect.png");
     weaponManager.sprites.fireball = weaponManager.icon.fireball;
     weaponManager.initWeapons();
     //PROJECTILES
@@ -446,6 +448,8 @@ function Avatar(){
     this.gold;
     this.hp;
     
+    this.invincible;
+    
     this.godMode;
     this.godModeStart;
     this.blink;
@@ -540,7 +544,8 @@ function WeaponManager(){
         shield: null
     };
     this.sprites = {
-        fireball: null
+        fireball: null,
+        shield: null
     };
     this.weaponArrayP = [];
     this.weaponArrayS = [];
@@ -601,20 +606,39 @@ function WeaponManager(){
                 [0, 25000, 20000, 18000, 15000, 15000], //COOL DOWN
                 [0, 25, 50, 80, 120, 150], //DMG
                 function(){
+                    this.triggerS = true;
                     for(var i = 0 ; i < enemyManager.enemyArray.length ; i++){
                         enemyManager.enemyArray[i].hp -= this.dmg[this.lvl];
                     }
                     
                 }, //TRIGGER ON
-                function(){} //TRIGGER OFF
+                function(){ this.triggerS = false; }, //TRIGGER OFF
+                function(){}, //EFFECT ANIMATION
+                [] //CUSTOM VALUES
             ),
             new WeaponS("Shield", weaponType.SECONDARY, 0,
                 this.icon.shield,
                 [1100, 800, 900, 1000, 1200],
                 [0, 5000, 5000, 5000, 5000, 5000], //OVER HEAT
                 [0, 20000, 20000, 20000, 20000, 20000], //COOL DOWN
-                function(){}, //TRIGGER ON
-                function(){} //TRIGGER OFF
+                [0, 0, 0, 0, 0, 0], //DMG
+                function(){
+                    this.triggerS = true;
+                    avatar.invincible = true;
+                    for(var i = 0 ; i < enemyManager.enemyArray.length ; i++){
+                        var e = enemyManager.enemyArray[i];
+                        if(ctxTool.objObjCollision([avatar.x-this.values[1], avatar.y-this.values[1], this.values[2], this.values[2]],[e.x,e.y,e.width,e.height])){
+                            e.hp = 0;
+                        }
+                    }
+                }, //TRIGGER ON
+                function(){ this.triggerS = false; avatar.invincible = false;}, //TRIGGER OFF
+                function(){
+                    if(this.triggerS){
+                        ctx.drawImage(this.values[0], avatar.x-this.values[1], avatar.y-this.values[1], this.values[2], this.values[2]);
+                    }
+                }, //EFFECT ANIMATION
+                [weaponManager.sprites.shield, 10*sizeManager.factor, 70*sizeManager.factor] //CUSTOM VALUES
             )
         ];
     };
@@ -762,11 +786,14 @@ function WeaponPBeam(name, type, lvl, icon, cost, oh, cd, tickDmg, tickInterval,
         return [this.origin[0]-this.widthTick/2, 0, this.widthTick, this.origin[1]];
     };
 }
-function WeaponS(name, type, lvl, icon, cost, oh, cd, dmg, triggerOnS, triggerOffS){
+function WeaponS(name, type, lvl, icon, cost, oh, cd, dmg, triggerOnS, triggerOffS, effectAnimationS, values){
     Weapon.call(this, name, type, lvl, icon, cost, oh, cd);
     this.dmg = dmg;
     this.triggerOnS = triggerOnS;
     this.triggerOffS = triggerOffS;
+    this.effectAnimationS = effectAnimationS;
+    this.values = values;
+    this.triggerS = false;
 }
 
 //PROJECTILE MANAGER
@@ -1731,6 +1758,12 @@ function GameUI(){
             }
             //ELSE CHECK PROJECTILE COLLISION // BEAM COLLISION // AVATAR COLLISION
             else{
+                //CHECK ENEMY HEATH AND KILL
+                if(e.hp <= 0){
+                    avatar.score += 1;
+                    enemyManager.enemyDeathArray.push(enemyManager.enemyArray.splice(i,1)[0]);
+                    explosionManager.explosionArray.push(new Explosion(e.x, e.y));
+                }
                 //PROJECTILE COLLISION
                 for(var j = 0 ; j < projectileManager.projectileArray.length ; j++){
                     var p = projectileManager.projectileArray[j];
@@ -1751,11 +1784,6 @@ function GameUI(){
                             break;
                     }
                 }
-                if(e.hp <= 0){
-                    avatar.score += 1;
-                    enemyManager.enemyDeathArray.push(enemyManager.enemyArray.splice(i,1)[0]);
-                    explosionManager.explosionArray.push(new Explosion(e.x, e.y));
-                }
                 //BEAM COLLISION
                 var w = avatar.loadout[avatar.activeWeaponIndex];
                 if(w && w.type === weaponType.BEAM){
@@ -1766,7 +1794,7 @@ function GameUI(){
                     }
                 }
                 //AVATAR COLLISION
-                if(!avatar.godMode){
+                if(!avatar.godMode && !avatar.invincible){
                     if(ctxTool.objObjCollision([avatar.x,avatar.y,avatar.width,avatar.height],
                                                 [e.x,e.y,e.width,e.height])){
                         enemyManager.enemyDeathArray.push(enemyManager.enemyArray.splice(i,1)[0]);
@@ -1784,17 +1812,19 @@ function GameUI(){
         //ITERATE ENEMY DEATH ARRAY
         for(var i = 0 ; i < enemyManager.enemyDeathArray.length ; i++){
             var e = enemyManager.enemyDeathArray[i];
-            if(e.alpha > 0){
-                e.alpha -= 0.02;
+            if(e){
+                if(e.alpha > 0){
+                    e.alpha -= 0.02;
+                }
+                else{
+                    enemyManager.enemyDeathArray.splice(i,1);
+                    i--;
+                }
+                ctx.globalAlpha = e.alpha;
+                if(e.alpha <= 0){ ctx.globalAlpha = 0; }
+                ctx.drawImage(e.sprite, e.x, e.y, e.width, e.height);
+                ctx.globalAlpha = 1;
             }
-            else{
-                enemyManager.enemyDeathArray.splice(i,1);
-                i--;
-            }
-            ctx.globalAlpha = e.alpha;
-            if(e.alpha <= 0){ ctx.globalAlpha = 0; }
-            ctx.drawImage(e.sprite, e.x, e.y, e.width, e.height);
-            ctx.globalAlpha = 1;
         }
     };
     this.drawExplosions = function(){
@@ -1837,8 +1867,9 @@ function GameUI(){
                 i--;
             }
         }
-        //DRAW BEAM
+        //DRAW OTHER WEAPON EFFECTS
         var w = avatar.loadout[avatar.activeWeaponIndex];
+        //DRAW BEAM
         if(w && w.type === weaponType.BEAM){
             if(w.origin){
                 var bw;
@@ -1846,6 +1877,11 @@ function GameUI(){
                 else{ bw = w.width; }
                 ctxTool.line(w.origin[0], w.origin[1], w.origin[0], 0, bw, w.clr);
             }
+        }
+        //DRAW SECONDARY WEAPON EFFECTS
+        var ws = avatar.loadout[2];
+        if(ws && ws.type === weaponType.SECONDARY){
+            ws.effectAnimationS();
         }
     };
     
