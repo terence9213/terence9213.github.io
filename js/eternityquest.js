@@ -98,6 +98,7 @@ function init(){
         SECONDARY: 3
     };
     weaponManager = new WeaponManager();
+    weaponManager.icon.lock = new Image();
     weaponManager.icon.blaster = new Image();
     weaponManager.icon.gatling = new Image();
     weaponManager.icon.fireball = new Image();
@@ -107,6 +108,7 @@ function init(){
     weaponManager.icon.shield = new Image();
     weaponManager.sprites.fireball = new Image();
     weaponManager.sprites.shield = new Image();
+    assetManager.addAsset(weaponManager.icon.lock, "img/eternityquest/lock.png");
     assetManager.addAsset(weaponManager.icon.blaster, "img/eternityquest/blaster.png");
     assetManager.addAsset(weaponManager.icon.gatling, "img/eternityquest/gatling.png");
     assetManager.addAsset(weaponManager.icon.fireball, "img/eternityquest/fireball.png");
@@ -535,6 +537,7 @@ function Avatar(){
 //WEAPON MANAGER
 function WeaponManager(){
     this.icon = {
+        lock: null,
         blaster: null,
         gatling: null,
         fireball: null,
@@ -1356,6 +1359,11 @@ function drawInventoryMenu(){
             if(weaponManager.weaponArrayP[i]){
                 ctx.drawImage(weaponManager.weaponArrayP[i].icon, inventoryMenu.rectItmX[i], 
                 inventoryMenu.rectItmY[i], inventoryMenu.rectItmW, inventoryMenu.rectItmW);
+                //WEPON LOCKED
+                if(avatar.inventoryP[i] <= 0){
+                    ctx.drawImage(weaponManager.icon.lock, inventoryMenu.rectItmX[i], 
+                    inventoryMenu.rectItmY[i], inventoryMenu.rectItmW, inventoryMenu.rectItmW);
+                }
             }
         }
     }
@@ -1370,6 +1378,11 @@ function drawInventoryMenu(){
             if(weaponManager.weaponArrayS[i]){
                 ctx.drawImage(weaponManager.weaponArrayS[i].icon, inventoryMenu.rectItmX[i], 
                 inventoryMenu.rectItmY[i], inventoryMenu.rectItmW, inventoryMenu.rectItmW);
+                //WEPON LOCKED
+                if(avatar.inventoryS[i] <= 0){
+                    ctx.drawImage(weaponManager.icon.lock, inventoryMenu.rectItmX[i], 
+                    inventoryMenu.rectItmY[i], inventoryMenu.rectItmW, inventoryMenu.rectItmW);
+                }
             }
         }
     }
