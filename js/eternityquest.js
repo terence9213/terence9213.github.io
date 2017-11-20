@@ -7,7 +7,8 @@
 var canvas = document.getElementById("game-canvas");
 var ctx = canvas.getContext("2d");
 
-var cookieManager;
+var cookieManager;//EXTERNAL
+var audioSynth;//EXTERNAL
 
 var sizeManager;
 var gameManager;
@@ -58,6 +59,9 @@ function init(){
     
     //CTX TOOL
     ctxTool = new CtxTool();
+    
+    audioSynth = new AudioSynth();
+    audioSynth.init();
     
     assetManager = new AssetManager();
     
@@ -415,10 +419,12 @@ function Settings(){
     this.toggleMusic = function(){
         this.musicMute = !this.musicMute;
         profileManager.updateProfile();
+        audioSynth.toggleMusicMute();
     };
     this.toggleFx = function(){
         this.fxMute = !this.fxMute;
         profileManager.updateProfile();
+        audioSynth.toggleFxMute();
     };
     this.toggleMouseControl = function(){
         this.mouseControl = !this.mouseControl;
@@ -949,7 +955,7 @@ function drawLoadingAnimation(){
     ctx.fillText("LOADING", canvas.width/2, canvas.height/2);
     ctx.font = sizeManager.fontSizeS + "px Courier";
     ctx.fillText(loader.msg, canvas.width/2, canvas.height/2 + 50);
-    if(assetManager && assetManager.loaded && cookieManager){
+    if(assetManager && assetManager.loaded && cookieManager && audioSynth.ready()){
         profileManager.getAllProfiles();
         gameManager.changeGameState(1);
     }
@@ -1049,6 +1055,8 @@ function ProfileMenu(){
         avatar.load();
         settings.load(profile.settings);
         gameManager.profileLoaded = true;
+        if(settings.musicMute){ audioSynth.toggleMusicMute(); }
+        audioSynth.playLoop(0);
         gameManager.changeGameState(3);
     };
     this.manageInput = function(key){
