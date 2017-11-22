@@ -110,6 +110,7 @@ function init(){
     weaponManager.icon.ray = new Image();
     weaponManager.icon.emp = new Image();
     weaponManager.icon.shield = new Image();
+    weaponManager.icon.oracleBeam = new Image();
     weaponManager.sprites.fireball = new Image();
     weaponManager.sprites.shield = new Image();
     assetManager.addAsset(weaponManager.icon.lock, "img/eternityquest/lock.png");
@@ -120,6 +121,7 @@ function init(){
     assetManager.addAsset(weaponManager.icon.ray, "img/eternityquest/ray.png");
     assetManager.addAsset(weaponManager.icon.emp, "img/eternityquest/emp.png");
     assetManager.addAsset(weaponManager.icon.shield, "img/eternityquest/shield.png");
+    assetManager.addAsset(weaponManager.icon.oracleBeam, "img/eternityquest/oracle-beam.png");
     assetManager.addAsset(weaponManager.sprites.shield, "img/eternityquest/shield-effect.png");
     weaponManager.sprites.fireball = weaponManager.icon.fireball;
     weaponManager.initWeapons();
@@ -247,6 +249,7 @@ function GameManager(){
         gameUI.resetUI();
     };
     this.changeGameState = function(target){
+        var pState = this.gameState;
         this.gameState = target;
         switch(target){
             //LOADING
@@ -264,6 +267,10 @@ function GameManager(){
             //MAIN MENU
             case 3:
                 canvas.style.cursor = "default";
+                if(pState === 1 || pState === 2){
+                    audioSynth.stopAllLoops();
+                    audioSynth.playLoop(audioSynth.loop.BGM_MAIN_MENU);
+                }
                 break;
             //SETTINGS MENU
             case 4:
@@ -276,6 +283,9 @@ function GameManager(){
             //PRE GAME ANIMATION
             case 6:
                 canvas.style.cursor = "none";
+                audioSynth.stopAllLoops();
+                audioSynth.playLoop(audioSynth.loop.BGM_GAME);
+                audioSynth.playClip(audioSynth.clip.READY);
                 break;
             //MAIN GAME
             case 7:
@@ -550,7 +560,8 @@ function WeaponManager(){
         laser: null,
         ray: null,
         emp: null,
-        shield: null
+        shield: null,
+        oracleBeam: null
     };
     this.sprites = {
         fireball: null,
@@ -591,10 +602,10 @@ function WeaponManager(){
             new WeaponPBeam("Laser", weaponType.BEAM, 0,
                 this.icon.laser, 
                 [1500, 800, 1200, 1700, 2300, 3000], //COST
-                [0, 1000, 1500, 2200, 3000, 4000], //OVER HEAT
+                [0, 3000, 3500, 4000, 4500, 5000], //OVER HEAT
                 [0, 2000, 2000, 2000, 2000, 1800], //COOL DOWN
-                [0, 5, 10, 15, 20, 25], //TICK DMG
-                [0, 120, 110, 100, 90, 80], //INTERVAL
+                [0, 5, 5, 10, 15, 20], //TICK DMG
+                [0, 150, 120, 120, 110, 100], //INTERVAL
                 2,5,ctxTool.clrRed2 //WIDTH-BASE //WIDTH-TICK //CLR
             ),
             new WeaponPBeam("Ray of Void", weaponType.BEAM, 0,
@@ -610,7 +621,7 @@ function WeaponManager(){
         this.weaponArrayS = [
             new WeaponS("EMP", weaponType.SECONDARY, 0,
                 this.icon.emp,
-                [1100, 800, 900, 1000, 1200],
+                [1100, 800, 900, 1000, 1200], //COST
                 [0, 0, 0, 0, 0, 0], //OVER HEAT
                 [0, 25000, 20000, 18000, 15000, 15000], //COOL DOWN
                 [0, 25, 50, 80, 120, 150], //DMG
@@ -627,7 +638,7 @@ function WeaponManager(){
             ),
             new WeaponS("Shield", weaponType.SECONDARY, 0,
                 this.icon.shield,
-                [1100, 800, 900, 1000, 1200],
+                [1100, 800, 900, 1000, 1200], //COST
                 [0, 5000, 5000, 5000, 5000, 5000], //OVER HEAT
                 [0, 20000, 20000, 20000, 20000, 20000], //COOL DOWN
                 [0, 0, 0, 0, 0, 0], //DMG
@@ -648,6 +659,46 @@ function WeaponManager(){
                     }
                 }, //EFFECT ANIMATION
                 [weaponManager.sprites.shield, 10*sizeManager.factor, 70*sizeManager.factor] //CUSTOM VALUES
+            ),
+            new WeaponS("Oracle Beam", weaponType.SECONDARY, 0,
+            this.icon.oracleBeam,
+            [2500, 1000, 1200, 1500, 2000], //COST
+            [0, 4000, 4500, 4800, 5000, 5500], //OVER HEAT
+            [0, 3000, 3000, 2800, 2500, 2000], //COOL DOWN
+            [0, 1, 3, 5, 7, 10], // TICK DMG
+            function(){
+                this.triggerS = true;
+                //MANAGE TICK
+                if(!this.values[1]){ this.values[1] = Date.now() - this.values[0][this.lvl]; }//lasttick
+                if(Date.now() > this.values[1] + this.values[0][this.lvl]){
+                    this.values[2] = true;
+                    this.values[1] = Date.now();
+                }else{ this.values[2] = false; }
+                //IF TICK
+                if(this.values[2]){
+                    for(var i = 0 ; i < enemyManager.enemyArray.length ; i++){
+                        enemyManager.enemyArray[i].hp -= this.dmg[this.lvl];
+                        enemyManager.enemyArray[i].ms = 2*sizeManager.factor;
+                    }
+                }
+            }, //TRIGGER ON
+            function(){ this.triggerS = false; }, //TRIGGER OFF
+            function(){
+                if(this.triggerS){
+                    //Origin
+                    ctxTool.circle(avatar.ax(), avatar.y, 10*sizeManager.factor, ctxTool.clrGreenT);
+                    //LINES to Enemies
+                    var w = 2*sizeManager.factor;
+                    if(this.values[2]){ w = 5*sizeManager.factor; }
+                    for(var i = 0 ; i < enemyManager.enemyArray.length ; i++){
+                        var e = enemyManager.enemyArray[i];
+                        ctxTool.line(avatar.ax(), avatar.y, e.ax(), e.ay(), w, ctxTool.clrGreen);
+                    }
+                    
+                }
+            }, //EFFECT ANIMATION
+            [[0,100,90,80,50,50], null, false] // CUSTOM VALUES
+            //tickIntervals, lastticktime, tick
             )
         ];
     };
@@ -839,30 +890,56 @@ function ProjectileSprite(x, y, ms, dmg, sprite, w, h){
 function EnemyManager(){
     this.enemyArray = [];
     this.enemyDeathArray = [];
-    //this.lvl;
+    this.lvl = 1;
     this.spawnInterval = 1000;
     this.lastSpawnTime = Date.now();
     this.sprite;
     this.ms = 5*sizeManager.factor;
     this.width = 50*sizeManager.factor;
     this.height = 50*sizeManager.factor;
-    this.hp = 10;
+    this.hp = 5;
+    this.gold = 1;
+    
+    this.enemyCounter = 0;
+    this.bossFight = false;
     
     this.reset = function(){
         this.enemyArray = [];
         this.enemyDeathArray = [];
+        this.lvl = 1;
+        this.enemyCounter = 0;
+        this.spawnInterval = 1000;
+        this.ms = 5*sizeManager.factor;
+        this.hp = 5;
+        this.gold = 1;
+    };
+    this.lvlUp = function(){
+        this.lvl++;
+        if(this.lvl % 3 === 0){ this.bossFight = true; }
+        //NORMAL LVL UP
+        else{
+            this.bossFight = false;
+            this.spawnInterval -= 100;
+            this.ms += 0.2*sizeManager.factor;
+            this.hp += 2.5;
+        }
     };
     this.spawn = function(){
-        if(Date.now() >= this.lastSpawnTime + this.spawnInterval){//Random X position
+        if(!this.bossFight && Date.now() >= this.lastSpawnTime + this.spawnInterval){//Random X position
+            this.enemyCounter++;
             var x = Math.floor(Math.random() * (canvas.width - this.width));
             var y = gameUI.gameAreaYTop;
-            this.enemyArray.push(new Enemy(this.sprite, x, y, this.width, this.height, this.ms, this.hp));
+            this.enemyArray.push(new Enemy(this.sprite, x, y, this.width, this.height, this.ms, this.hp, this.gold));
             this.lastSpawnTime = Date.now();
+            //LVL UP
+            if(this.enemyCounter % 25 === 0){
+                this.lvlUp();
+            }
         }
     };
     
 }
-function Enemy(sprite, x, y, w, h, ms, hp){
+function Enemy(sprite, x, y, w, h, ms, hp, gold){
     this.sprite = sprite;
     this.x = x;
     this.y = y;
@@ -871,6 +948,13 @@ function Enemy(sprite, x, y, w, h, ms, hp){
     this.ms = ms;
     this.hp = hp;
     this.alpha = 1;
+    this.gold = gold;
+    this.ax = function(){
+        return this.x + (this.width/2);
+    };
+    this.ay = function(){
+        return this.y + (this.height/2);
+    };
 }
 
 //EXPLOSIONS
@@ -1055,8 +1139,8 @@ function ProfileMenu(){
         avatar.load();
         settings.load(profile.settings);
         gameManager.profileLoaded = true;
-        if(settings.musicMute){ audioSynth.toggleMusicMute(); }
-        audioSynth.playLoop(0);
+        if(settings.musicMute){ audioSynth.muteMusic(); }
+        if(settings.fxMute){ audioSynth.muteFx(); }
         gameManager.changeGameState(3);
     };
     this.manageInput = function(key){
@@ -1781,7 +1865,7 @@ function GameUI(){
             else{
                 //CHECK ENEMY HEATH AND KILL
                 if(e.hp <= 0){
-                    avatar.score += 1;
+                    avatar.score += e.gold;
                     enemyManager.enemyDeathArray.push(enemyManager.enemyArray.splice(i,1)[0]);
                     explosionManager.explosionArray.push(new Explosion(e.x, e.y));
                 }
@@ -2083,6 +2167,8 @@ function CtxTool(){
     this.clrRedT = "rgba(156, 25, 25, 0.5)";
     this.clrYellow = "#ffff00";
     this.clrBlue = "#0078f8";
+    this.clrGreen = "#00ff00";
+    this.clrGreenT = "rgba(0, 250, 0, 0.5)";
     this.circle = function(x,y,r,clr){
         ctx.beginPath();
         ctx.fillStyle = clr;
