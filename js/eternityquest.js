@@ -113,6 +113,7 @@ function init(){
     weaponManager.icon.oracleBeam = new Image();
     weaponManager.sprites.fireball = new Image();
     weaponManager.sprites.shield = new Image();
+    weaponManager.sprites.laserPulse = new Image();
     assetManager.addAsset(weaponManager.icon.lock, "img/eternityquest/lock.png");
     assetManager.addAsset(weaponManager.icon.blaster, "img/eternityquest/blaster.png");
     assetManager.addAsset(weaponManager.icon.gatling, "img/eternityquest/gatling.png");
@@ -123,6 +124,7 @@ function init(){
     assetManager.addAsset(weaponManager.icon.shield, "img/eternityquest/shield.png");
     assetManager.addAsset(weaponManager.icon.oracleBeam, "img/eternityquest/oracle-beam.png");
     assetManager.addAsset(weaponManager.sprites.shield, "img/eternityquest/shield-effect.png");
+    assetManager.addAsset(weaponManager.sprites.laserPulse, "img/eternityquest/laser-pulse.png");
     weaponManager.sprites.fireball = weaponManager.icon.fireball;
     weaponManager.initWeapons();
     //PROJECTILES
@@ -567,10 +569,11 @@ function WeaponManager(){
     };
     this.sprites = {
         fireball: null,
-        shield: null
+        shield: null,
+        laserPulse: null
     };
-    this.weaponArrayP = [];
-    this.weaponArrayS = [];
+    this.weaponArrayP = [];  //PRIMARY WEAPONS
+    this.weaponArrayS = [];  //SECONDARY WEAPONS
     this.initWeapons = function(){
         this.weaponArrayP = [
             new WeaponPProjectileB("Blaster", weaponType.PROJECTILE_BASIC, 0,
@@ -632,6 +635,9 @@ function WeaponManager(){
                     for(var i = 0 ; i < enemyManager.enemyArray.length ; i++){
                         enemyManager.enemyArray[i].hp -= this.dmg[this.lvl];
                     }
+                    if(enemyManager.bossFight && enemyManager.boss){
+                        enemyManager.boss.hp -= this.dmg[this.lvl];
+                    }
                     
                 }, //TRIGGER ON
                 function(){ this.triggerS = false; }, //TRIGGER OFF
@@ -682,6 +688,9 @@ function WeaponManager(){
                         enemyManager.enemyArray[i].hp -= this.dmg[this.lvl];
                         enemyManager.enemyArray[i].ms = 2*sizeManager.factor;
                     }
+                    if(enemyManager.bossFight && enemyManager.boss){
+                        enemyManager.boss.hp -= this.dmg[this.lvl];
+                    }
                 }
             }, //TRIGGER ON
             function(){ this.triggerS = false; }, //TRIGGER OFF
@@ -696,13 +705,17 @@ function WeaponManager(){
                         var e = enemyManager.enemyArray[i];
                         ctxTool.line(avatar.ax(), avatar.y, e.ax(), e.ay(), w, ctxTool.clrGreen);
                     }
-                    
+                    if(enemyManager.bossFight && enemyManager.boss){
+                        var b = enemyManager.boss;
+                        ctxTool.line(avatar.ax(), avatar.y, b.ax(), b.ay(), w, ctxTool.clrGreen);
+                    }
                 }
             }, //EFFECT ANIMATION
             [[0,100,90,80,50,50], null, false] // CUSTOM VALUES
             //tickIntervals, lastticktime, tick
             )
         ];
+        
     };
     this.resetAllWeaponCoolDown = function(){
         for(var i = 0 ; i < this.weaponArrayP.length ; i++){
@@ -861,8 +874,10 @@ function WeaponS(name, type, lvl, icon, cost, oh, cd, dmg, triggerOnS, triggerOf
 //PROJECTILE MANAGER
 function ProjectileManager(){
     this.projectileArray = [];
+    this.projectileArrayE = [];
     this.reset = function(){
         this.projectileArray = [];
+        this.projectileArrayE = [];
     };
 }
 //PROJECTILE OBJ
@@ -947,7 +962,7 @@ function EnemyManager(){
             this.enemyArray.push(new Enemy(this.sprite, x, y, this.width, this.height, this.ms, this.hp, this.gold));
             this.lastSpawnTime = Date.now();
             //LVL UP
-            if(this.enemyCounter % 25 === 0){
+            if(this.enemyCounter % 2 === 0){
                 this.lvlUp();
             }
         }
@@ -991,6 +1006,20 @@ function Boss(sprite, x, y, w, h, ms, hp, gold){
     Enemy.call(this, sprite, x, y, w, h, ms, hp, gold);
     this.left = true;
     this.right = false;
+    this.ax = function(){ return this.x + this.width/2 - sizeManager.spriteWidth/2; };
+    this.ay = function(){ return this.y + this.height/2; };
+    this.interval = 800;
+    this.lastProjectileTime = null;
+    this.pW = 25*sizeManager.factor;
+    this.pH = 50*sizeManager.factor;
+    this.trigger = function(){
+        if(!this.lastProjectileTime){ this.lastProjectileTime = Date.now() - this.interval; }
+        if(Date.now() > this.lastProjectileTime + this.interval){
+            var p = new ProjectileSprite(this.ax(), this.ay(), 8*sizeManager.factor, 5, weaponManager.sprites.laserPulse, this.pW, this.pH);
+            projectileManager.projectileArrayE.push(p);
+            this.lastProjectileTime = Date.now();
+        }
+    };
 }
 
 //EXPLOSIONS
@@ -1972,6 +2001,8 @@ function GameUI(){
     this.drawBoss = function(){
         if(enemyManager.boss && !enemyManager.bDeathTime){
             var b = enemyManager.boss;
+            //TRIGGER
+            b.trigger();
             //MOVEMENT
             if(b.y < 100*sizeManager.factor){
                 b.y += b.ms;
@@ -2107,6 +2138,41 @@ function GameUI(){
             ws.effectAnimationS();
         }
     };
+    this.drawEnemyWeaponEffect = function(){
+        //DRAW PROJECTILES
+        for(var i= 0 ; i < projectileManager.projectileArrayE.length ; i++){
+            var p = projectileManager.projectileArrayE[i];
+            //POSITION / MOVEMENT
+            p.y += p.ms;
+            //RENDER PROJECTILE && COLLISIONS
+            switch(p.type){
+                case weaponType.PROJECTILE_BASIC:
+                    //RENDER
+                    ctxTool.circle(p.x, p.y, p.r, p.clr);
+                    //COLLISION
+                    if(ctxTool.objPtCollision([avatar.x,avatar.y,avatar.width,avatar.height],[p.x,p.y])){
+                        projectileManager.projectileArrayE.splice(i,1);
+                        avatar.hp -= p.dmg;
+                    }
+                    break;
+                case weaponType.PROJECTILE_SP:
+                    //RENDER
+                    ctx.drawImage(p.sprite, p.x, p.y, sizeManager.spriteWidth, sizeManager.spriteHeight);
+                    //COLLISION
+                    if(ctxTool.objObjCollision([avatar.x,avatar.y,avatar.width,avatar.height],[p.offsetX(),p.y, p.width, p.height])){
+                        projectileManager.projectileArrayE.splice(i,1);
+                        avatar.hp -= p.dmg;
+                    }
+                    break;
+            }
+            
+            //ESCAPE BORDER
+            if(p.y < 0){
+                projectileManager.projectileArrayE.splice(i,1);
+                i--;
+            }
+        }
+    };
     
     this.keyDown = function(keyCode){
         switch(keyCode){
@@ -2197,6 +2263,7 @@ function drawGame(){
     
     //PROJECTILE//Beam//EFFECT
     gameUI.drawWeaponEffect();
+    gameUI.drawEnemyWeaponEffect();
     
     //ENEMY
     gameUI.drawEnemy();

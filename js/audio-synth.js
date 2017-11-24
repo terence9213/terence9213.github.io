@@ -106,23 +106,23 @@ function AudioSynth(){
         }
         else{
             musicMute = true;
-            musicGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime+0.5).disconnect(audioCtx.destination);
-            //musicGain.disconnect(audioCtx.destination);
-            musicGain.gain.value = musicVol;
+            //musicGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime+0.5).disconnect(audioCtx.destination);
+            musicGain.disconnect(audioCtx.destination);
+            //musicGain.gain.value = musicVol;
         }
     };
     this.toggleFxMute = function(){
         if(fxMute){
             fxMute = false;
-            fxGain.gain.value = 0;
+            //fxGain.gain.value = 0;
             fxGain.connect(audioCtx.destination);
-            fxGain.gain.linearRampToValueAtTime(musicVol, audioCtx.currentTime+0.5);
+            //fxGain.gain.linearRampToValueAtTime(musicVol, audioCtx.currentTime+0.5);
         }
         else{
             fxMute = true;
-            fxGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime+0.5);
+            //fxGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime+0.5);
             fxGain.disconnect(audioCtx.destination);
-            fxGain.gain.value = musicVol;
+            //fxGain.gain.value = musicVol;
         }
     };
     
