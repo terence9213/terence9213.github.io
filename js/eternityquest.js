@@ -641,7 +641,11 @@ function WeaponManager(){
                     
                 }, //TRIGGER ON
                 function(){ this.triggerS = false; }, //TRIGGER OFF
-                function(){}, //EFFECT ANIMATION
+                function(){
+                    if(this.triggerS && enemyManager.bossFight && enemyManager.boss){
+                        explosionManager.explosionArray.push(new Explosion(enemyManager.boss.axP(), enemyManager.boss.ay()));
+                    }
+                }, //EFFECT ANIMATION
                 [] //CUSTOM VALUES
             ),
             new WeaponS("Shield", weaponType.SECONDARY, 0,
@@ -653,10 +657,19 @@ function WeaponManager(){
                 function(){
                     this.triggerS = true;
                     avatar.invincible = true;
+                    //ENEMY COLLISIONS
                     for(var i = 0 ; i < enemyManager.enemyArray.length ; i++){
                         var e = enemyManager.enemyArray[i];
                         if(ctxTool.objObjCollision([avatar.x-this.values[1], avatar.y-this.values[1], this.values[2], this.values[2]],[e.x,e.y,e.width,e.height])){
                             e.hp = 0;
+                        }
+                    }
+                    //ENEMY PROJECTILE COLLISIONS
+                    for(var i = 0 ; i < projectileManager.projectileArrayE.length ; i++){
+                        var p = projectileManager.projectileArrayE[i];
+                        if(ctxTool.objObjCollision([avatar.x-this.values[1], avatar.y-this.values[1], this.values[2], this.values[2]],[p.x,p.y,p.width,p.height])){
+                            projectileManager.projectileArrayE.splice(i,1);
+                            explosionManager.explosionArray.push(new Explosion(p.x,p.y));
                         }
                     }
                 }, //TRIGGER ON
@@ -720,6 +733,10 @@ function WeaponManager(){
     this.resetAllWeaponCoolDown = function(){
         for(var i = 0 ; i < this.weaponArrayP.length ; i++){
             var w = this.weaponArrayP[i];
+            w.resetHeat();
+        }
+        for(var i = 0 ; i < this.weaponArrayS.length ; i++){
+            var w = this.weaponArrayS[i];
             w.resetHeat();
         }
     };
@@ -1004,10 +1021,22 @@ function Enemy(sprite, x, y, w, h, ms, hp, gold){
 //BOSS
 function Boss(sprite, x, y, w, h, ms, hp, gold){
     Enemy.call(this, sprite, x, y, w, h, ms, hp, gold);
+    this.maxHp = hp;
     this.left = true;
     this.right = false;
-    this.ax = function(){ return this.x + this.width/2 - sizeManager.spriteWidth/2; };
+    this.ax = function(){ return this.x + this.width/2; };
+    this.axP = function(){ return this.x + this.width/2 - sizeManager.spriteWidth/2; };
     this.ay = function(){ return this.y + this.height/2; };
+    this.healthBarMaxW = 100*sizeManager.factor;
+    this.healthBarH = 4*sizeManager.factor;
+    this.healthBarContainerW = 104*sizeManager.factor;
+    this.healthBarContainerH = 8*sizeManager.factor;
+    this.healthBarContainerLW = 2*sizeManager.factor;
+    this.hbx = function(){ return this.ax() - this.healthBarMaxW/2; };
+    this.hbxt = function(){ return this.hbx() + (this.hp/this.maxHp*this.healthBarMaxW); };
+    this.hby = function(){ return this.y - 4*sizeManager.factor; };
+    this.hbcx = function(){ return this.ax() - this.healthBarContainerW/2; };
+    this.hbcy = function(){ return this.y - this.healthBarContainerH; };
     this.interval = 800;
     this.lastProjectileTime = null;
     this.pW = 25*sizeManager.factor;
@@ -1015,7 +1044,7 @@ function Boss(sprite, x, y, w, h, ms, hp, gold){
     this.trigger = function(){
         if(!this.lastProjectileTime){ this.lastProjectileTime = Date.now() - this.interval; }
         if(Date.now() > this.lastProjectileTime + this.interval){
-            var p = new ProjectileSprite(this.ax(), this.ay(), 8*sizeManager.factor, 5, weaponManager.sprites.laserPulse, this.pW, this.pH);
+            var p = new ProjectileSprite(this.axP(), this.ay(), 8*sizeManager.factor, 5, weaponManager.sprites.laserPulse, this.pW, this.pH);
             projectileManager.projectileArrayE.push(p);
             this.lastProjectileTime = Date.now();
         }
@@ -1915,8 +1944,6 @@ function GameUI(){
         
     };
     this.drawEnemy = function(){
-        //TRY SPAWN ENEMY
-        enemyManager.spawn();
         //ITERATE ENEMY ARRAY
         for(var i = 0 ; i < enemyManager.enemyArray.length ; i++){
             var e = enemyManager.enemyArray[i];
@@ -2003,6 +2030,9 @@ function GameUI(){
             var b = enemyManager.boss;
             //TRIGGER
             b.trigger();
+            //HEALTH BAR / CONTAINER
+            ctxTool.strokeRect(b.hbcx(), b.hbcy(), b.healthBarContainerW, b.healthBarContainerH, b.healthBarContainerLW, ctxTool.clrBlack);
+            ctxTool.line(b.hbx(), b.hby(), b.hbxt(), b.hby(), b.healthBarH, ctxTool.clrRed2);
             //MOVEMENT
             if(b.y < 100*sizeManager.factor){
                 b.y += b.ms;
@@ -2150,19 +2180,23 @@ function GameUI(){
                     //RENDER
                     ctxTool.circle(p.x, p.y, p.r, p.clr);
                     //COLLISION
-                    if(ctxTool.objPtCollision([avatar.x,avatar.y,avatar.width,avatar.height],[p.x,p.y])){
-                        projectileManager.projectileArrayE.splice(i,1);
-                        avatar.hp -= p.dmg;
-                    }
+                    if(!avatar.invincible && !avatar.godMode){
+                        if(ctxTool.objPtCollision([avatar.x,avatar.y,avatar.width,avatar.height],[p.x,p.y])){
+                            projectileManager.projectileArrayE.splice(i,1);
+                            avatar.hp -= p.dmg;
+                        }
+                    }  
                     break;
                 case weaponType.PROJECTILE_SP:
                     //RENDER
                     ctx.drawImage(p.sprite, p.x, p.y, sizeManager.spriteWidth, sizeManager.spriteHeight);
                     //COLLISION
-                    if(ctxTool.objObjCollision([avatar.x,avatar.y,avatar.width,avatar.height],[p.offsetX(),p.y, p.width, p.height])){
-                        projectileManager.projectileArrayE.splice(i,1);
-                        avatar.hp -= p.dmg;
-                    }
+                    if(!avatar.invincible && !avatar.godMode){
+                        if(ctxTool.objObjCollision([avatar.x,avatar.y,avatar.width,avatar.height],[p.offsetX(),p.y, p.width, p.height])){
+                            projectileManager.projectileArrayE.splice(i,1);
+                            avatar.hp -= p.dmg;
+                        }
+                    } 
                     break;
             }
             
@@ -2271,6 +2305,8 @@ function drawGame(){
     gameUI.drawBoss();
     //EXPLOSIONS
     gameUI.drawExplosions();
+    //TRY SPAWN ENEMY
+    enemyManager.spawn();
     //BARS
     ctx.drawImage(gameUI.barTop, 0, 0, canvas.width, gameUI.barHeight);
     ctx.drawImage(gameUI.barBtm, 0, canvas.height - gameUI.barHeight, canvas.width, gameUI.barHeight);
