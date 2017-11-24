@@ -962,7 +962,7 @@ function EnemyManager(){
             this.enemyArray.push(new Enemy(this.sprite, x, y, this.width, this.height, this.ms, this.hp, this.gold));
             this.lastSpawnTime = Date.now();
             //LVL UP
-            if(this.enemyCounter % 2 === 0){
+            if(this.enemyCounter % 25 === 0){
                 this.lvlUp();
             }
         }
