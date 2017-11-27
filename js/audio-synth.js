@@ -14,19 +14,26 @@ function AudioSynth(){
     };
     
     this.clip = {
-        READY: 0
+        READY: 0,
+        EXPLOSION: 1,
+        BLAST: 2,
+        GATLING: 3
     };
     
     var loopFiles = ["audio/eternityquest/menu.ogg","audio/eternityquest/eternity.ogg"];
-    var clipFiles = ["audio/eternityquest/ready.ogg"];
+    var clipFiles = ["audio/eternityquest/ready.ogg", 
+                     "audio/eternityquest/explosion.ogg", 
+                     "audio/eternityquest/blast.ogg", 
+                     "audio/eternityquest/gatling.ogg"];
     var loopBufferArray = [];
     var clipBufferArray = [];
     
-    var sourceArray = [];
+    var sourceArrayLoop = [];
+    var sourceArrayClip = [];
     
     var musicGain = audioCtx.createGain();
     var fxGain = audioCtx.createGain();
-    var musicVol = 0.5;
+    var musicVol = 0.75;
     var fxVol = 0.75;
     var musicMute = false;
     var fxMute = false;
@@ -143,18 +150,18 @@ function AudioSynth(){
         musicGain.gain.value = 0;
         source.start(0);
         musicGain.gain.linearRampToValueAtTime(musicVol, audioCtx.currentTime+0.8);
-        sourceArray[i] = source;
+        sourceArrayLoop[i] = source;
     };
     
     this.stopLoop = function(i){
-        if(sourceArray[i]){
-            sourceArray[i].stop();
-            sourceArray[i] = null;
+        if(sourceArrayLoop[i]){
+            sourceArrayLoop[i].stop();
+            sourceArrayLoop[i] = null;
         }
     };
     
     this.stopAllLoops = function(){
-        for(var i = 0 ; i < sourceArray.length ; i++){
+        for(var i = 0 ; i < sourceArrayLoop.length ; i++){
             this.stopLoop(i);
         }
     };
@@ -165,6 +172,22 @@ function AudioSynth(){
         source.buffer = clipBufferArray[i];
         source.loop = false;
         source.start(0);
+    };
+    
+    this.playClipLoop = function(i){
+        var source = audioCtx.createBufferSource();
+        source.connect(fxGain);
+        source.buffer = clipBufferArray[i];
+        source.loop = true;
+        source.start(0, 0.2, 0.5);
+        sourceArrayClip[i] = source;
+    };
+    
+    this.stopClipLoop = function(i){
+        if(sourceArrayClip[i]){
+            sourceArrayClip[i].stop();
+            sourceArrayClip[i] = null;
+        }
     };
     
     this.get = function(){

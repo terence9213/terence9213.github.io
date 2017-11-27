@@ -583,7 +583,9 @@ function WeaponManager(){
                 [0, 2000, 2000, 1800, 1700, 1500], //COOL DOWN
                 [0, 5, 10, 15, 20, 25], //DMG
                 [0, 100, 90, 80, 70, 60], //INTERVAL
-                10*sizeManager.factor, 5*sizeManager.factor, ctxTool.clrRed2 //SPD //RADIUS // CLR
+                10*sizeManager.factor, //SPD
+                audioSynth.clip.BLAST, //SOUND FX
+                5*sizeManager.factor, ctxTool.clrRed2 //RADIUS // CLR
             ),
             new WeaponPProjectileB("Gatling Gun", weaponType.PROJECTILE_BASIC, 0,
                 this.icon.gatling, 
@@ -592,7 +594,9 @@ function WeaponManager(){
                 [0, 2000, 1800, 1500, 1200, 1000], //COOL DOWN
                 [0, 2, 3, 10, 10, 10], //DMG
                 [0, 50, 50, 40, 30, 25], //INTERVAL
-                12*sizeManager.factor, 3*sizeManager.factor, ctxTool.clrBlue //SPD //RADIUS // CLR
+                12*sizeManager.factor, //SPD
+                audioSynth.clip.GATLING, // SOUND FX
+                3*sizeManager.factor, ctxTool.clrBlue //RADIUS // CLR
             ),
             new WeaponPProjectileSP("Fireball", weaponType.PROJECTILE_SP, 0,
                 this.icon.fireball, 
@@ -601,7 +605,9 @@ function WeaponManager(){
                 [0, 2000, 1950, 1800, 1700, 1600], //COOL DOWN
                 [0, 25, 35, 55, 75, 100], //DMG
                 [0, 200, 190, 180, 175, 150], //INTERVAL
-                10*sizeManager.factor, this.sprites.fireball, //SPD //SPRITE
+                10*sizeManager.factor, //SPD
+                null, //SOUND FX
+                this.sprites.fireball, //SPRITE
                 30*sizeManager.factor, 50*sizeManager.factor  //WIDTH //HEIGHT
             ),
             new WeaponPBeam("Laser", weaponType.BEAM, 0,
@@ -819,6 +825,8 @@ function Weapon(name, type, lvl, icon, cost, oh, cd){
                     }
                     projectileManager.projectileArray.push(p);
                     this.lastProjectileTime = Date.now();
+                    //SOUND FX
+                    audioSynth.playClip(this.fx);
                 }
                 break;
             case weaponType.BEAM:
@@ -849,17 +857,18 @@ function Weapon(name, type, lvl, icon, cost, oh, cd){
         }
     };
 }
-function WeaponPProjectileB(name, type, lvl, icon, cost, oh, cd, dmg, interval, spd, r, clr){
+function WeaponPProjectileB(name, type, lvl, icon, cost, oh, cd, dmg, interval, spd, fx, r, clr){
     Weapon.call(this, name, type, lvl, icon, cost, oh, cd);
     this.dmg = dmg;
     this.interval = interval;
     this.spd = spd;
     this.r = r;
+    this.fx = fx;
     this.clr = clr;
     this.lastProjectileTime = null;
 }
-function WeaponPProjectileSP(name, type, lvl, icon, cost, oh, cd, dmg, interval, spd, sprite, width, height){
-    WeaponPProjectileB.call(this, name, type, lvl, icon, cost, oh, cd, dmg, interval, spd);
+function WeaponPProjectileSP(name, type, lvl, icon, cost, oh, cd, dmg, interval, spd, fx, sprite, width, height){
+    WeaponPProjectileB.call(this, name, type, lvl, icon, cost, oh, cd, dmg, interval, spd, fx);
     this.sprite = sprite;
     this.spriteWidth = width;
     this.spriteHeight = height;
@@ -1062,10 +1071,12 @@ function ExplosionManager(){
         this.explosionArray = [];
     };
 }
-function Explosion(x, y, delay){
+function Explosion(x, y, delay, mute){
     this.x = x;
     this.y = y;
     this.delay = delay;
+    this.mute = false; if(mute){this.mute = mute;}
+    this.start = false;
     this.width = 50*sizeManager.factor;
     this.height = 50*sizeManager.factor;
     this.state = 0;
@@ -2109,6 +2120,10 @@ function GameUI(){
         for(var i = 0 ; i < explosionManager.explosionArray.length ; i++){
             var e = explosionManager.explosionArray[i];
             if(e && !e.delay){
+                if(!e.start){
+                    if(!e.mute){ audioSynth.playClip(audioSynth.clip.EXPLOSION); }
+                    e.start = true;
+                }
                 if(Date.now() >= e.frameStartTime + e.frameDuration){
                     e.frameStartTime = Date.now();
                     e.state++;
@@ -2328,7 +2343,7 @@ function Death(){
     this.msgY = 400*sizeManager.factor;
     this.scoreY = 450*sizeManager.factor;
     this.rectBtnBack = [237.5*sizeManager.factor, 625*sizeManager.factor, 125*sizeManager.factor, 50*sizeManager.factor];
-    this.explosionInterval = 200;
+    this.explosionInterval = 1500;
     this.lastExplosionTime = Date.now();
     this.explosionCount = 0;
     this.explosionX;
@@ -2349,9 +2364,12 @@ function Death(){
     this.generateExplosions = function(){
         if(Date.now() > this.lastExplosionTime + this.explosionInterval){
             this.lastExplosionTime = Date.now();
-            explosionManager.explosionArray.push(new Explosion(this.explosionX[this.explosionCount], this.explosionY[this.explosionCount]));
-            if(this.explosionCount < this.explosionX.length){ this.explosionCount++; }
-            else{ this.explosionCount = 0; }
+            for(var i = 0 ; i < 5 ; i++){
+                explosionManager.explosionArray.push(
+                    new Explosion(this.explosionX[i], this.explosionY[i], 
+                    (i*300), true)
+                );
+            }
         }
     };
     this.manageClick = function(){
