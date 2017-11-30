@@ -606,7 +606,7 @@ function WeaponManager(){
                 [0, 25, 35, 55, 75, 100], //DMG
                 [0, 200, 190, 180, 175, 150], //INTERVAL
                 10*sizeManager.factor, //SPD
-                null, //SOUND FX
+                audioSynth.clip.FIREBALL, //SOUND FX
                 this.sprites.fireball, //SPRITE
                 30*sizeManager.factor, 50*sizeManager.factor  //WIDTH //HEIGHT
             ),
@@ -617,7 +617,7 @@ function WeaponManager(){
                 [0, 2000, 2000, 2000, 2000, 1800], //COOL DOWN
                 [0, 5, 5, 10, 15, 20], //TICK DMG
                 [0, 150, 120, 120, 110, 100], //INTERVAL
-                2,5,ctxTool.clrRed2 //WIDTH-BASE //WIDTH-TICK //CLR
+                2,5,ctxTool.clrRed2, audioSynth.synth.LASER //WIDTH-BASE //WIDTH-TICK //CLR //FX
             ),
             new WeaponPBeam("Ray of Void", weaponType.BEAM, 0,
                 this.icon.ray, 
@@ -626,7 +626,7 @@ function WeaponManager(){
                 [0, 5000, 4500, 4000, 3000, 2000], //COOL DOWN
                 [0, 10, 20, 35, 50, 80], //TICK DMG
                 [0, 100, 100, 90, 80, 70], //INTERVAL
-                3,6,ctxTool.clrBlue //WIDTH-BASE //WIDTH-TICK //CLR
+                3,6,ctxTool.clrBlue, audioSynth.synth.VOID //WIDTH-BASE //WIDTH-TICK //CLR //FX
             )
         ];
         this.weaponArrayS = [
@@ -695,6 +695,8 @@ function WeaponManager(){
             [0, 1, 3, 5, 7, 10], // TICK DMG
             function(){
                 this.triggerS = true;
+                //SOUD FX
+                audioSynth.synthOn(audioSynth.synth.ORACLE);
                 //MANAGE TICK
                 if(!this.values[1]){ this.values[1] = Date.now() - this.values[0][this.lvl]; }//lasttick
                 if(Date.now() > this.values[1] + this.values[0][this.lvl]){
@@ -712,7 +714,11 @@ function WeaponManager(){
                     }
                 }
             }, //TRIGGER ON
-            function(){ this.triggerS = false; }, //TRIGGER OFF
+            function(){
+                this.triggerS = false;
+                //SOUND FX
+                audioSynth.synthOff(audioSynth.synth.ORACLE);
+            }, //TRIGGER OFF
             function(){
                 if(this.triggerS){
                     //Origin
@@ -836,6 +842,8 @@ function Weapon(name, type, lvl, icon, cost, oh, cd){
                     this.tick = true;
                     this.lastTickTime = Date.now();
                 }else{ this.tick = false; }
+                //SOUND FX
+                audioSynth.synthOn(this.fx);
                 break;
             case weaponType.SECONDARY:
                 this.triggerOnS();
@@ -850,6 +858,7 @@ function Weapon(name, type, lvl, icon, cost, oh, cd){
             case weaponType.BEAM:
                 this.tick = false;
                 this.origin = null;
+                audioSynth.synthOff(this.fx);
                 break;
             case weaponType.SECONDARY:
                 this.triggerOffS();
@@ -873,13 +882,14 @@ function WeaponPProjectileSP(name, type, lvl, icon, cost, oh, cd, dmg, interval,
     this.spriteWidth = width;
     this.spriteHeight = height;
 }
-function WeaponPBeam(name, type, lvl, icon, cost, oh, cd, tickDmg, tickInterval, width, widthTick, clr){
+function WeaponPBeam(name, type, lvl, icon, cost, oh, cd, tickDmg, tickInterval, width, widthTick, clr, fx){
     Weapon.call(this, name, type, lvl, icon, cost, oh, cd);
     this.tickDmg = tickDmg;
     this.tickInterval = tickInterval;
     this.width = width;
     this.widthTick = widthTick;
     this.clr = clr;
+    this.fx = fx;
     this.tick = false;
     this.lastTickTime = null;
     this.origin = null;
@@ -971,13 +981,17 @@ function EnemyManager(){
     };
     this.lvlUp = function(){
         this.lvl++;
-        if(this.lvl % 3 === 0){ this.bossFight = true; }
+        if(this.lvl % 3 === 0){
+            this.bossFight = true;
+            ctxTool.toast("BOSS LEVEL");
+        }
         //NORMAL LVL UP
         else{
             this.bossFight = false;
             this.spawnInterval -= 100;
             this.ms += 0.2*sizeManager.factor;
             this.hp += 2.5;
+            ctxTool.toast("LEVEL: " + this.lvl);
         }
     };
     this.spawn = function(){
@@ -988,7 +1002,7 @@ function EnemyManager(){
             this.enemyArray.push(new Enemy(this.sprite, x, y, this.width, this.height, this.ms, this.hp, this.gold));
             this.lastSpawnTime = Date.now();
             //LVL UP
-            if(this.enemyCounter % 25 === 0){
+            if(this.enemyCounter % 20 === 0){
                 this.lvlUp();
             }
         }
@@ -1056,6 +1070,8 @@ function Boss(sprite, x, y, w, h, ms, hp, gold){
             var p = new ProjectileSprite(this.axP(), this.ay(), 8*sizeManager.factor, 5, weaponManager.sprites.laserPulse, this.pW, this.pH);
             projectileManager.projectileArrayE.push(p);
             this.lastProjectileTime = Date.now();
+            //SOUND FX
+            audioSynth.playClip(audioSynth.clip.LASER);
         }
     };
 }
@@ -1116,6 +1132,8 @@ function draw(){
             drawDeath();
             break;
     }
+    //TOAST
+    if(ctxTool){ctxTool.drawToast();}
     
     requestAnimationFrame(draw);
 }
@@ -1803,6 +1821,7 @@ function PreGame(){
                 this.delayStart = false;
                 //GO TO GAME
                 gameManager.changeGameState(7);
+                ctxTool.toast("LEVEL: 1");
             }
         }
     };
@@ -2331,6 +2350,8 @@ function drawGame(){
     gameUI.drawInventory();
     
     if(avatar.hp <= 0){
+        audioSynth.synthOffAll();
+        audioSynth.playClip(audioSynth.clip.EXPLOSION);
         gameManager.changeGameState(8);
         death.initCoordinates(avatar.x, avatar.y);
     }
@@ -2451,6 +2472,33 @@ function CtxTool(){
         ctx.textAlign = align;
         ctx.fillStyle = clr;
         ctx.fillText(text, x, y);
+    };
+    
+    
+    var toastText = null;
+    var toastStart = null;
+    var toastDuration = 1500;
+    var toastAlpha = null;
+    this.toast = function(text){
+        toastStart = Date.now();
+        toastText = text;
+        toastAlpha = 0;
+    };
+    this.drawToast = function(){
+        if(toastText){
+            if(Date.now() < toastStart + toastDuration){
+                if(toastAlpha < 1){ toastAlpha += 0.03; }
+                
+            }
+            else{
+                if(toastAlpha > 0){ toastAlpha -= 0.03; }
+                else{ toastText = null; toastStart = null; toastAlpha = null; }
+            }
+            ctx.globalAlpha = toastAlpha;
+            if(toastAlpha <= 0){ ctx.globalAlpha = 0 ;}
+            this.text(toastText, canvas.width/2, canvas.height/2, "center", sizeManager.fontSizeM, this.clrWhite);
+            ctx.globalAlpha = 1;
+        }
     };
     
     this.objObjCollision = function(a1,a2){

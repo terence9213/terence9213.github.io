@@ -17,14 +17,18 @@ function AudioSynth(){
         READY: 0,
         EXPLOSION: 1,
         BLAST: 2,
-        GATLING: 3
+        GATLING: 3,
+        FIREBALL: 4,
+        LASER: 5
     };
     
     var loopFiles = ["audio/eternityquest/menu.ogg","audio/eternityquest/eternity.ogg"];
     var clipFiles = ["audio/eternityquest/ready.ogg", 
                      "audio/eternityquest/explosion.ogg", 
                      "audio/eternityquest/blast.ogg", 
-                     "audio/eternityquest/gatling.ogg"];
+                     "audio/eternityquest/gatling.ogg",
+                     "audio/eternityquest/fireball.ogg",
+                     "audio/eternityquest/laser.ogg"];
     var loopBufferArray = [];
     var clipBufferArray = [];
     
@@ -190,7 +194,136 @@ function AudioSynth(){
         }
     };
     
-    this.get = function(){
-        return loopBufferArray;
+    this.synth = {
+        LASER: 0,
+        VOID: 1,
+        ORACLE: 2
+    };
+    
+    //SYNTH
+    var attack = 0.1;
+    var decay = 0;
+    var sustain = 0.05;
+    var release = 0.3;
+    var bend = 0.3;
+    var synthArray = [];
+    var osc1 = null;
+    var osc2 = null;
+    var osc3 = null;
+    var gainNode = null;
+    
+    this.synthOn = function(synth){
+        var s = synthArray[synth];
+        if(!s){
+            synthArray[synth] = [audioCtx.currentTime, audioCtx.createOscillator(), audioCtx.createOscillator(), audioCtx.createOscillator(), audioCtx.createGain()];
+            s = synthArray[synth];
+            var startTime = audioCtx.currentTime;
+            switch(synth){
+                case this.synth.LASER:
+                    s[1].type = "square";
+                    s[2].type = "triangle";
+                    s[3].type = "sawtooth";
+                    s[1].frequency.value = 110; // --> 220
+                    s[2].frequency.value = 120; // --> 147
+                    s[3].frequency.value = 50; // --> 73
+                    s[1].connect(s[4]);
+                    s[2].connect(s[4]);
+                    s[3].connect(s[4]);
+                    s[4].connect(fxGain);
+                    s[1].start(0);
+                    s[2].start(0);
+                    s[3].start(0);
+                    //PITCH BEND
+                    s[1].frequency.linearRampToValueAtTime(125, startTime + bend);
+                    s[2].frequency.linearRampToValueAtTime(147, startTime + bend);
+                    s[3].frequency.linearRampToValueAtTime(73, startTime + bend);
+
+                    //ADSR Evnelope
+                    s[4].gain.cancelScheduledValues(0);
+                    s[4].gain.setValueAtTime(0, startTime);
+                    //Attack
+                    s[4].gain.linearRampToValueAtTime(0.5, startTime + attack);
+                    //Decay to Sustain
+                    s[4].gain.linearRampToValueAtTime(sustain, startTime + attack + decay);
+                    
+                    break;
+                case this.synth.VOID:
+                    s[1].type = "square";
+                    s[2].type = "square";
+                    s[3].type = "sawtooth";
+                    s[1].frequency.value = 45; // --> 60
+                    s[2].frequency.value = 50; // --> 147
+                    s[3].frequency.value = 50; // --> 73
+                    s[1].connect(s[4]);
+                    s[2].connect(s[4]);
+                    s[3].connect(s[4]);
+                    s[4].connect(fxGain);
+                    s[1].start(0);
+                    s[2].start(0);
+                    s[3].start(0);
+                    //PITCH BEND
+                    s[1].frequency.linearRampToValueAtTime(60, startTime + bend);
+                    s[2].frequency.linearRampToValueAtTime(73, startTime + bend);
+                    s[3].frequency.linearRampToValueAtTime(73, startTime + bend);
+
+                    //ADSR Evnelope
+                    s[4].gain.cancelScheduledValues(0);
+                    s[4].gain.setValueAtTime(0, startTime);
+                    //Attack
+                    s[4].gain.linearRampToValueAtTime(0.5, startTime + attack);
+                    //Decay to Sustain
+                    s[4].gain.linearRampToValueAtTime(sustain, startTime + attack + decay);
+                    
+                    break;
+                case this.synth.ORACLE:
+                    s[1].type = "square";
+                    s[2].type = "sawtooth";
+                    s[3].type = "triangle";
+                    s[1].frequency.value = 150; // --> 60
+                    s[2].frequency.value = 50; // --> 147
+                    s[3].frequency.value = 147; // --> 73
+                    s[1].connect(s[4]);
+                    s[2].connect(s[4]);
+                    s[3].connect(s[4]);
+                    s[4].connect(fxGain);
+                    s[1].start(0);
+                    s[2].start(0);
+                    s[3].start(0);
+                    //PITCH BEND
+                    //s[1].frequency.linearRampToValueAtTime(60, startTime + bend);
+                    s[2].frequency.linearRampToValueAtTime(73, startTime + bend);
+                    //s[3].frequency.linearRampToValueAtTime(73, startTime + bend);
+
+                    //ADSR Evnelope
+                    s[4].gain.cancelScheduledValues(0);
+                    s[4].gain.setValueAtTime(0, startTime);
+                    //Attack
+                    s[4].gain.linearRampToValueAtTime(0.5, startTime + attack);
+                    //Decay to Sustain
+                    s[4].gain.linearRampToValueAtTime(sustain, startTime + attack + decay);
+                    break;
+            }
+        }
+    };
+    
+    this.synthOff = function(synth){
+        var s = synthArray[synth];
+        if(s){
+            var startTime = audioCtx.currentTime;
+            //ADSR Evelope
+            s[4].gain.cancelScheduledValues(0);
+            s[4].gain.setValueAtTime(s[4].gain.value, startTime);
+            s[4].gain.linearRampToValueAtTime(0, startTime + release);
+            s[1].stop(startTime + release);
+            s[2].stop(startTime + release);
+            s[3].stop(startTime + release);
+            synthArray[synth] = null;
+        }
+    };
+    
+    this.synthOffAll = function(){
+        for(var i = 0 ; i < synthArray.length ; i++){
+            this.synthOff(i);
+        }
     };
 }
