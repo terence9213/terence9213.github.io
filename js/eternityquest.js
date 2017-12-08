@@ -581,7 +581,7 @@ function WeaponManager(){
                 [0, 300, 500, 750, 1000, 1500], //COST
                 [0, 1000, 1500, 2000, 2500, 3200], //OVER HEAT
                 [0, 2000, 2000, 1800, 1700, 1500], //COOL DOWN
-                [0, 5, 10, 15, 20, 25], //DMG
+                [0, 5, 7, 10, 15, 20], //DMG
                 [0, 100, 90, 80, 70, 60], //INTERVAL
                 10*sizeManager.factor, //SPD
                 audioSynth.clip.BLAST, //SOUND FX
@@ -592,7 +592,7 @@ function WeaponManager(){
                 [500, 500, 800, 800, 1000, 1500], //COST
                 [0, 3000, 4500, 4500, 5000, 5000], //OVER HEAT
                 [0, 2000, 1800, 1500, 1200, 1000], //COOL DOWN
-                [0, 2, 3, 10, 10, 10], //DMG
+                [0, 2, 3, 4, 4, 5], //DMG
                 [0, 50, 50, 40, 30, 25], //INTERVAL
                 12*sizeManager.factor, //SPD
                 audioSynth.clip.GATLING, // SOUND FX
@@ -603,7 +603,7 @@ function WeaponManager(){
                 [500, 500, 750, 1000, 1300, 1800], //COST
                 [0, 1000, 1250, 1600, 2000, 2700], //OVER HEAT
                 [0, 2000, 1950, 1800, 1700, 1600], //COOL DOWN
-                [0, 25, 35, 55, 75, 100], //DMG
+                [0, 20, 25, 35, 40, 60], //DMG
                 [0, 200, 190, 180, 175, 150], //INTERVAL
                 10*sizeManager.factor, //SPD
                 audioSynth.clip.FIREBALL, //SOUND FX
@@ -615,16 +615,16 @@ function WeaponManager(){
                 [1500, 800, 1200, 1700, 2300, 3000], //COST
                 [0, 3000, 3500, 4000, 4500, 5000], //OVER HEAT
                 [0, 2000, 2000, 2000, 2000, 1800], //COOL DOWN
-                [0, 5, 5, 10, 15, 20], //TICK DMG
+                [0, 5, 5, 8, 12, 15], //TICK DMG
                 [0, 150, 120, 120, 110, 100], //INTERVAL
                 2,5,ctxTool.clrRed2, audioSynth.synth.LASER //WIDTH-BASE //WIDTH-TICK //CLR //FX
             ),
             new WeaponPBeam("Ray of Void", weaponType.BEAM, 0,
                 this.icon.ray, 
-                [2000, 1000, 1500, 2000, 2500, 3300], //COST
+                [1800, 1000, 1500, 2000, 2500, 3300], //COST
                 [0, 4000, 4000, 4500, 5000, 5000], //OVER HEAT
                 [0, 5000, 4500, 4000, 3000, 2000], //COOL DOWN
-                [0, 10, 20, 35, 50, 80], //TICK DMG
+                [0, 10, 15, 20, 25, 35], //TICK DMG
                 [0, 100, 100, 90, 80, 70], //INTERVAL
                 3,6,ctxTool.clrBlue, audioSynth.synth.VOID //WIDTH-BASE //WIDTH-TICK //CLR //FX
             )
@@ -632,10 +632,10 @@ function WeaponManager(){
         this.weaponArrayS = [
             new WeaponS("EMP", weaponType.SECONDARY, 0,
                 this.icon.emp,
-                [1100, 800, 900, 1000, 1200], //COST
+                [1000, 800, 900, 1000, 1200], //COST
                 [0, 0, 0, 0, 0, 0], //OVER HEAT
-                [0, 25000, 20000, 18000, 15000, 15000], //COOL DOWN
-                [0, 25, 50, 80, 120, 150], //DMG
+                [0, 20000, 18000, 15000, 12000, 7500], //COOL DOWN
+                [0, 10, 15, 20, 25, 25], //DMG
                 function(){
                     this.triggerS = true;
                     for(var i = 0 ; i < enemyManager.enemyArray.length ; i++){
@@ -659,7 +659,7 @@ function WeaponManager(){
                 [1100, 800, 900, 1000, 1200], //COST
                 [0, 5000, 5000, 5000, 5000, 5000], //OVER HEAT
                 [0, 20000, 20000, 20000, 20000, 20000], //COOL DOWN
-                [0, 0, 0, 0, 0, 0], //DMG
+                [0, 5, 8, 10, 15, 20], //DMG
                 function(){
                     this.triggerS = true;
                     avatar.invincible = true;
@@ -667,7 +667,7 @@ function WeaponManager(){
                     for(var i = 0 ; i < enemyManager.enemyArray.length ; i++){
                         var e = enemyManager.enemyArray[i];
                         if(ctxTool.objObjCollision([avatar.x-this.values[1], avatar.y-this.values[1], this.values[2], this.values[2]],[e.x,e.y,e.width,e.height])){
-                            e.hp = 0;
+                            e.hp -= this.dmg[this.lvl];
                         }
                     }
                     //ENEMY PROJECTILE COLLISIONS
@@ -689,7 +689,7 @@ function WeaponManager(){
             ),
             new WeaponS("Oracle Beam", weaponType.SECONDARY, 0,
             this.icon.oracleBeam,
-            [2500, 1000, 1200, 1500, 2000], //COST
+            [2300, 1000, 1200, 1500, 2000], //COST
             [0, 4000, 4500, 4800, 5000, 5500], //OVER HEAT
             [0, 3000, 3000, 2800, 2500, 2000], //COOL DOWN
             [0, 1, 3, 5, 7, 10], // TICK DMG
@@ -961,10 +961,16 @@ function EnemyManager(){
     this.bWidth = 128*sizeManager.factor;
     this.bHeight = 88*sizeManager.factor;
     this.bMs = 2.5*sizeManager.factor;
-    this.bHp = 100;
-    this.bGold = 50;
+    this.bHp = 90;
+    this.bGold = 45;
     this.bDeathTime = null;
     this.bDeathDelay = 2500;
+    
+    this.lvlManager = {
+        spawnInterval:  [0, 1000,  1000,   0,  950,    950,    0,   900,   900,     0],
+        ms:             [0, 5,     5,      0,  5.5,    5.5,    0,   5.8,   5.8,     0],
+        hp:             [0, 5,     6,      0,  7,      8,      0,   9,     10,      0]
+    };
     
     this.reset = function(){
         this.enemyArray = [];
@@ -976,21 +982,33 @@ function EnemyManager(){
         this.hp = 5;
         this.gold = 1;
         this.bossFight = false;
+        this.bHp = 90;
+        this.bGold = 45;
         this.boss = null;
         this.bDeathTime = null;
     };
     this.lvlUp = function(){
         this.lvl++;
         if(this.lvl % 3 === 0){
+            this.bHp += 10;
+            this.bGold += 5;
             this.bossFight = true;
             ctxTool.toast("BOSS LEVEL");
         }
         //NORMAL LVL UP
         else{
             this.bossFight = false;
-            this.spawnInterval -= 100;
-            this.ms += 0.2*sizeManager.factor;
-            this.hp += 2.5;
+            if(this.lvl<9){
+                this.spawnInterval = this.lvlManager.spawnInterval[this.lvl];
+                this.ms = this.lvlManager.ms[this.lvl]*sizeManager.factor;
+                this.hp = this.lvlManager.hp[this.lvl];
+            }
+            else{
+                this.spawnInterval -= 50;
+                this.ms += 1*sizeManager.factor;
+                this.hp += 2;
+            }
+                
             ctxTool.toast("LEVEL: " + this.lvl);
         }
     };
@@ -1866,6 +1884,28 @@ function GameUI(){
     this.circleR = 25*sizeManager.factor;
     this.circleTxtY = 765*sizeManager.factor;
     
+    //KILL STREAK
+    this.streak = 0;
+    this.endStreak = function(){
+        if(this.streak > 5){
+            var bonus;
+            if(this.streak < 20){
+                bonus = Math.floor(this.streak/2);
+                avatar.score += bonus;
+            }
+            else{
+                bonus = Math.round(this.streak/1.5);
+                avatar.score += bonus;
+            }
+            ctxTool.toast("Streak bonus: " + bonus);
+            this.streak = 0;
+        }
+        else{
+            this.streak = 0;
+        }
+        
+    };
+    
     //AVATAR MOVMENT
     this.up = false;
     this.down = false;
@@ -1881,6 +1921,7 @@ function GameUI(){
         this.right = false;
         this.fire = false;
         this.fireS = false;
+        this.streak = 0;
     };
     
     this.drawInventory = function(){
@@ -1918,6 +1959,7 @@ function GameUI(){
     };
     this.drawScore = function(){
         ctxTool.text(avatar.score, 300*sizeManager.factor, 50*sizeManager.factor, "center", sizeManager.fontSizeS, ctxTool.clrRed);
+        ctxTool.text(this.streak, 100*sizeManager.factor, 60*sizeManager.factor, "center", sizeManager.fontSizeS, ctxTool.clrRed);
     };
     this.drawAvatar = function(){
         if(settings.mouseControl){
@@ -1983,12 +2025,14 @@ function GameUI(){
             if(e.y >= gameUI.gameAreaYBtm){
                 enemyManager.enemyArray.splice(i,1);
                 i--;
+                this.endStreak();
             }
             //ELSE CHECK PROJECTILE COLLISION // BEAM COLLISION // AVATAR COLLISION
             else{
                 //CHECK ENEMY HEATH AND KILL
                 if(e.hp <= 0){
                     avatar.score += e.gold;
+                    this.streak += 1;
                     enemyManager.enemyDeathArray.push(enemyManager.enemyArray.splice(i,1)[0]);
                     explosionManager.explosionArray.push(new Explosion(e.x, e.y));
                 }
@@ -2350,6 +2394,7 @@ function drawGame(){
     gameUI.drawInventory();
     
     if(avatar.hp <= 0){
+        gameUI.endStreak();
         audioSynth.synthOffAll();
         audioSynth.playClip(audioSynth.clip.EXPLOSION);
         gameManager.changeGameState(8);
@@ -2474,30 +2519,34 @@ function CtxTool(){
         ctx.fillText(text, x, y);
     };
     
-    
+    var toastQueue = [];
     var toastText = null;
     var toastStart = null;
-    var toastDuration = 1500;
+    var toastDuration = 1300;
     var toastAlpha = null;
     this.toast = function(text){
-        toastStart = Date.now();
-        toastText = text;
-        toastAlpha = 0;
+        toastQueue.push(text);
     };
     this.drawToast = function(){
         if(toastText){
             if(Date.now() < toastStart + toastDuration){
-                if(toastAlpha < 1){ toastAlpha += 0.03; }
-                
+                if(toastAlpha < 1){ toastAlpha += 0.05; }
             }
             else{
-                if(toastAlpha > 0){ toastAlpha -= 0.03; }
+                if(toastAlpha > 0){ toastAlpha -= 0.05; }
                 else{ toastText = null; toastStart = null; toastAlpha = null; }
             }
             ctx.globalAlpha = toastAlpha;
             if(toastAlpha <= 0){ ctx.globalAlpha = 0 ;}
-            this.text(toastText, canvas.width/2, canvas.height/2, "center", sizeManager.fontSizeM, this.clrWhite);
+            this.text(toastText, canvas.width/2, canvas.height/3, "center", sizeManager.fontSizeM, this.clrWhite);
             ctx.globalAlpha = 1;
+        }
+        else{
+            if(toastQueue.length > 0){
+                toastText = toastQueue.splice(0,1)[0];
+                toastStart = Date.now();
+                toastAlpha = 0;
+            }
         }
     };
     
@@ -2656,7 +2705,7 @@ function UI(){
             ui.targetY = event.pageY - canvas.offsetTop;
             ui.avatarTargetX = ui.targetX - avatar.width/2;
             ui.avatarTargetY = ui.targetY - avatar.height/2;
-            document.getElementById("mouseXY").textContent = ui.targetX + " " + ui.targetY;
+            //document.getElementById("mouseXY").textContent = ui.targetX + " " + ui.targetY;
         });
         canvas.addEventListener("mousedown", function(event){
             ui.mouseDown(event.button);

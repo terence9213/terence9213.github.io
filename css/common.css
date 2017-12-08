@@ -18,7 +18,15 @@ and open the template in the editor.
     text-align: center;
     margin: 10px;
 }
-
+.topnav{
+    height: 100px;
+    background-color: #000000;
+    overflow: hidden;
+}
+.topnav a{
+    float: left;
+    color: #cccccc;
+}
 
 /* -- MAIN BODY -- */
 .main-body{
