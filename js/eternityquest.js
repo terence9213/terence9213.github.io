@@ -373,7 +373,7 @@ function Profile(name, slot){
     this.slot = slot;
     this.dataArray;
     this.name = name;
-    this.settings = "000";
+    this.settings = "001";
     this.highScore = 0;
     this.gold = 0;
     this.inventory = "00000";
@@ -578,7 +578,7 @@ function WeaponManager(){
         this.weaponArrayP = [
             new WeaponPProjectileB("Blaster", weaponType.PROJECTILE_BASIC, 0,
                 this.icon.blaster, 
-                [0, 300, 500, 750, 1000, 1500], //COST
+                [0, 300, 500, 750, 1000, 0], //COST
                 [0, 1000, 1500, 2000, 2500, 3200], //OVER HEAT
                 [0, 2000, 2000, 1800, 1700, 1500], //COOL DOWN
                 [0, 5, 7, 10, 15, 20], //DMG
@@ -589,7 +589,7 @@ function WeaponManager(){
             ),
             new WeaponPProjectileB("Gatling Gun", weaponType.PROJECTILE_BASIC, 0,
                 this.icon.gatling, 
-                [500, 500, 800, 800, 1000, 1500], //COST
+                [500, 500, 800, 800, 1000, 0], //COST
                 [0, 3000, 4500, 4500, 5000, 5000], //OVER HEAT
                 [0, 2000, 1800, 1500, 1200, 1000], //COOL DOWN
                 [0, 2, 3, 4, 4, 5], //DMG
@@ -600,7 +600,7 @@ function WeaponManager(){
             ),
             new WeaponPProjectileSP("Fireball", weaponType.PROJECTILE_SP, 0,
                 this.icon.fireball, 
-                [500, 500, 750, 1000, 1300, 1800], //COST
+                [500, 500, 750, 1000, 1300, 0], //COST
                 [0, 1000, 1250, 1600, 2000, 2700], //OVER HEAT
                 [0, 2000, 1950, 1800, 1700, 1600], //COOL DOWN
                 [0, 20, 25, 35, 40, 60], //DMG
@@ -612,7 +612,7 @@ function WeaponManager(){
             ),
             new WeaponPBeam("Laser", weaponType.BEAM, 0,
                 this.icon.laser, 
-                [1500, 800, 1200, 1700, 2300, 3000], //COST
+                [1500, 800, 1200, 1700, 2300, 0], //COST
                 [0, 3000, 3500, 4000, 4500, 5000], //OVER HEAT
                 [0, 2000, 2000, 2000, 2000, 1800], //COOL DOWN
                 [0, 5, 5, 8, 12, 15], //TICK DMG
@@ -621,7 +621,7 @@ function WeaponManager(){
             ),
             new WeaponPBeam("Ray of Void", weaponType.BEAM, 0,
                 this.icon.ray, 
-                [1800, 1000, 1500, 2000, 2500, 3300], //COST
+                [1800, 1000, 1500, 2000, 2500, 0], //COST
                 [0, 4000, 4000, 4500, 5000, 5000], //OVER HEAT
                 [0, 5000, 4500, 4000, 3000, 2000], //COOL DOWN
                 [0, 10, 15, 20, 25, 35], //TICK DMG
@@ -632,7 +632,7 @@ function WeaponManager(){
         this.weaponArrayS = [
             new WeaponS("EMP", weaponType.SECONDARY, 0,
                 this.icon.emp,
-                [1000, 800, 900, 1000, 1200], //COST
+                [1000, 800, 900, 1000, 1200, 0], //COST
                 [0, 0, 0, 0, 0, 0], //OVER HEAT
                 [0, 20000, 18000, 15000, 12000, 7500], //COOL DOWN
                 [0, 10, 15, 20, 25, 25], //DMG
@@ -656,7 +656,7 @@ function WeaponManager(){
             ),
             new WeaponS("Shield", weaponType.SECONDARY, 0,
                 this.icon.shield,
-                [1100, 800, 900, 1000, 1200], //COST
+                [1100, 800, 900, 1000, 1200, 0], //COST
                 [0, 5000, 5000, 5000, 5000, 5000], //OVER HEAT
                 [0, 20000, 20000, 20000, 20000, 20000], //COOL DOWN
                 [0, 5, 8, 10, 15, 20], //DMG
@@ -689,7 +689,7 @@ function WeaponManager(){
             ),
             new WeaponS("Oracle Beam", weaponType.SECONDARY, 0,
             this.icon.oracleBeam,
-            [2300, 1000, 1200, 1500, 2000], //COST
+            [2300, 1000, 1200, 1500, 2000, 0], //COST
             [0, 4000, 4500, 4800, 5000, 5500], //OVER HEAT
             [0, 3000, 3000, 2800, 2500, 2000], //COOL DOWN
             [0, 1, 3, 5, 7, 10], // TICK DMG
@@ -1626,6 +1626,7 @@ function drawInventoryMenu(){
         "left", sizeManager.fontSizeXS, ctxTool.clrRed);
         var btnTxt = "UPGRADE";
         if(weapon.lvl <= 0){ btnTxt = "BUY"; weapon.lvl = 1; }
+        if(weapon.lvl >= 5){ btnTxt = "MAX LVL"; }
         //BUY/UPGRADE BTN
         ctxTool.text(btnTxt, inventoryMenu.rectBtnTxt[0], inventoryMenu.rectBtnTxt[1], "center", ctxTool.clrRed);
         //ICON
@@ -1726,7 +1727,7 @@ function drawInventoryMenu(){
                 ctxTool.text("CoolDown: " + weapon.coolDownTime[weapon.lvl]/1000 + "s", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[6], 
                 "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
             }
-            else{
+            else if(weapon.lvl < 5){
                 switch(weapon.type){
                     case weaponType.PROJECTILE_BASIC:
                     case weaponType.PROJECTILE_SP:
@@ -1764,6 +1765,34 @@ function drawInventoryMenu(){
                 "right", sizeManager.fontSizeXS, ctxTool.clrBlack);
                 ctxTool.text(" -> " + weapon.coolDownTime[weapon.lvl+1]/1000 + "s", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[6], 
                 "left", sizeManager.fontSizeXS, ctxTool.clrRed);
+            }
+            else{
+                btnTxt = "-";
+                switch(weapon.type){
+                    case weaponType.PROJECTILE_BASIC:
+                    case weaponType.PROJECTILE_SP:
+                        //DMG
+                        ctxTool.text("Damage: " + weapon.dmg[weapon.lvl], inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[3], 
+                        "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                        //SPD
+                        ctxTool.text("Rate: " + (1000/weapon.interval[weapon.lvl]).toFixed(2) + "/s", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
+                        "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                        break;
+                    case weaponType.BEAM:
+                        //TICK DMG
+                        ctxTool.text("Tick Damage: " + weapon.tickDmg[weapon.lvl], inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[3], 
+                        "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                        //TICK
+                        ctxTool.text("Tick: " + weapon.tickInterval[weapon.lvl] + "ms", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
+                        "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                        break;
+                }
+                //OVERHEAT
+                ctxTool.text("Overheat: " + weapon.overHeatTime[weapon.lvl]/1000 + "s", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[5], 
+                "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                //COOLDOWN
+                ctxTool.text("CoolDown: " + weapon.coolDownTime[weapon.lvl]/1000 + "s", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[6], 
+                "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
             }
             //BTN TXT
             ctxTool.text(btnTxt, inventoryMenu.rectShopBtnTxt[0], inventoryMenu.rectShopBtnTxt[1],
