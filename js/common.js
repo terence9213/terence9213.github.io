@@ -8,8 +8,8 @@
 /* -- PRE LOADER -- */
 
 $(window).on("load", function(){
-    setTimeout(function() {$("#preloader").fadeOut();}, 1000); 
-    //$("#preloader").fadeOut();
+    //setTimeout(function() {$("#preloader").fadeOut();}, 1000); 
+    $("#preloader").fadeOut();
 });
 
 

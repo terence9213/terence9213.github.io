@@ -10,6 +10,9 @@ and open the template in the editor.
 
 /*https://coolors.co/0f120f-332222-2d3047-364156-c8c8c8*/
 
+body.custom{
+    margin-top: 100px;
+}
 body.custom-dark{
     background-color: #332222;
 }
