@@ -1653,6 +1653,11 @@ function drawInventoryMenu(){
                 ctxTool.text("Tick: " + weapon.tickInterval[weapon.lvl] + "ms", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[3], 
                 "left", sizeManager.fontSizeXS, ctxTool.clrRed);
                 break;
+            case weaponType.SECONDARY:
+                //DMG
+                ctxTool.text("Damage: " + weapon.dmg[weapon.lvl], inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[2], 
+                "left", sizeManager.fontSizeXS, ctxTool.clrRed);
+                break;
         }
         //ctxTool.text("" + weapon.desc + "", inventoryMenu.rectTxtX, inventoryMenu.rectTxtY[3],"left", sizeManager.fontSizeXS, ctxTool.clrRed);
         //OVERHEAT
@@ -1719,6 +1724,11 @@ function drawInventoryMenu(){
                         ctxTool.text("Tick: " + weapon.tickInterval[weapon.lvl] + "ms", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
                         "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
                         break;
+                    case weaponType.SECONDARY:
+                        //DMG
+                        ctxTool.text("Damage: " + weapon.dmg[weapon.lvl], inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[3], 
+                        "center", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                        break;
                 }
                 //OVERHEAT
                 ctxTool.text("Overheat: " + weapon.overHeatTime[weapon.lvl]/1000 + "s", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[5], 
@@ -1752,6 +1762,13 @@ function drawInventoryMenu(){
                         ctxTool.text("Tick: " + weapon.tickInterval[weapon.lvl] + "ms", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
                         "right", sizeManager.fontSizeXS, ctxTool.clrBlack);
                         ctxTool.text(" -> " + weapon.tickInterval[weapon.lvl+1] + "ms", inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[4], 
+                        "left", sizeManager.fontSizeXS, ctxTool.clrRed);
+                        break;
+                    case weaponType.SECONDARY:
+                        //DMG
+                        ctxTool.text("Damage: " + weapon.dmg[weapon.lvl], inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[3], 
+                        "right", sizeManager.fontSizeXS, ctxTool.clrBlack);
+                        ctxTool.text(" -> " + weapon.dmg[weapon.lvl+1], inventoryMenu.rectShopTxtX, inventoryMenu.rectShopTxtY[3], 
                         "left", sizeManager.fontSizeXS, ctxTool.clrRed);
                         break;
                 }
@@ -2737,6 +2754,7 @@ function UI(){
             //document.getElementById("mouseXY").textContent = ui.targetX + " " + ui.targetY;
         });
         canvas.addEventListener("mousedown", function(event){
+            event.preventDefault();
             ui.mouseDown(event.button);
         });
         canvas.addEventListener("mouseup", function(event){
