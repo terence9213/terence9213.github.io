@@ -19,16 +19,21 @@ function AudioSynth(){
         BLAST: 2,
         GATLING: 3,
         FIREBALL: 4,
-        LASER: 5
+        LASER: 5,
+        BLIZZARD: 6
     };
     
-    var loopFiles = ["audio/eternityquest/menu.ogg","audio/eternityquest/eternity.ogg"];
+    var loopFiles = ["audio/eternityquest/jingle.ogg", //"audio/eternityquest/menu.ogg",
+                     "audio/eternityquest/bells.ogg"//"audio/eternityquest/eternity.ogg"
+                    ];
+                 
     var clipFiles = ["audio/eternityquest/ready.ogg", 
                      "audio/eternityquest/explosion.ogg", 
                      "audio/eternityquest/blast.ogg", 
                      "audio/eternityquest/gatling.ogg",
                      "audio/eternityquest/fireball.ogg",
-                     "audio/eternityquest/laser.ogg"];
+                     "audio/eternityquest/laser.ogg",
+                     "audio/eternityquest/blizzard.ogg"];
     var loopBufferArray = [];
     var clipBufferArray = [];
     
@@ -179,12 +184,16 @@ function AudioSynth(){
     };
     
     this.playClipLoop = function(i){
-        var source = audioCtx.createBufferSource();
-        source.connect(fxGain);
-        source.buffer = clipBufferArray[i];
-        source.loop = true;
-        source.start(0, 0.2, 0.5);
-        sourceArrayClip[i] = source;
+        if(!sourceArrayClip[i]){
+            var source = audioCtx.createBufferSource();
+            source.connect(fxGain);
+            source.buffer = clipBufferArray[i];
+            source.loop = true;
+            fxGain.gain.value = 0;
+            source.start(0);
+            fxGain.gain.linearRampToValueAtTime(fxVol, audioCtx.currentTime+0.3);
+            sourceArrayClip[i] = source;
+        }
     };
     
     this.stopClipLoop = function(i){
@@ -324,6 +333,9 @@ function AudioSynth(){
     this.synthOffAll = function(){
         for(var i = 0 ; i < synthArray.length ; i++){
             this.synthOff(i);
+        }
+        for(var i = 0 ; i < sourceArrayClip.length ; i++){
+            this.stopClipLoop(i);
         }
     };
 }

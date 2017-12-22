@@ -1,7 +1,22 @@
 /* 
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+
+Hey there! Welcome to the Eternity Quest!
+
+Thanks for taking an interest in my backend code. 
+Before you start digging through over two thousand lines of code,
+I'd like to warn you that this was my first attempt at creating a game entirely in Javascript.
+
+You may find evidence of a lack of proper planning, as I dived into this project with 0 experience,
+and as a result, 0 expectations as to what I could and could not do.
+
+You may also find a lack of object-oriented-ness, and an over abundance of global variables.
+You will also find some ugly solutions to simple problems, as if a plumber
+desperately threw duct tape and super glue at a mess of leaky pipes. 
+Because honestly, this project has been a learning experience for me.
+I threw myself into the deep end, and struggled to shore, thrashing and screaming.
+
+But I made it nonetheless. I made THIS, and I am immensely proud of what I have achieved.
+
  */
 
 var canvas = document.getElementById("game-canvas");
@@ -77,7 +92,8 @@ function init(){
     mainMenu = new MainMenu();
     mainMenu.bg = new Image();
     mainMenu.bgWarn = new Image();
-    assetManager.addAsset(mainMenu.bg, "img/eternityquest/bg-menu.png");
+    assetManager.addAsset(mainMenu.bg, "img/eternityquest/bg-menu-ch.png");
+//    assetManager.addAsset(mainMenu.bg, "img/eternityquest/bg-menu.png");
     assetManager.addAsset(mainMenu.bgWarn, "img/eternityquest/bg-menu-warn.png");
     
     settingsMenu = new SettingsMenu();
@@ -108,24 +124,36 @@ function init(){
     weaponManager.icon.fireball = new Image();
     weaponManager.icon.laser = new Image();
     weaponManager.icon.ray = new Image();
+    weaponManager.icon.snowball = new Image();
+    
     weaponManager.icon.emp = new Image();
     weaponManager.icon.shield = new Image();
     weaponManager.icon.oracleBeam = new Image();
+    weaponManager.icon.snowflake = new Image();
+    
     weaponManager.sprites.fireball = new Image();
+    weaponManager.sprites.snowball = new Image();
     weaponManager.sprites.shield = new Image();
     weaponManager.sprites.laserPulse = new Image();
+    weaponManager.sprites.blizzardEffect = new Image();
+    
     assetManager.addAsset(weaponManager.icon.lock, "img/eternityquest/lock.png");
     assetManager.addAsset(weaponManager.icon.blaster, "img/eternityquest/blaster.png");
     assetManager.addAsset(weaponManager.icon.gatling, "img/eternityquest/gatling.png");
     assetManager.addAsset(weaponManager.icon.fireball, "img/eternityquest/fireball.png");
     assetManager.addAsset(weaponManager.icon.laser, "img/eternityquest/laser.png");
     assetManager.addAsset(weaponManager.icon.ray, "img/eternityquest/ray.png");
+    assetManager.addAsset(weaponManager.icon.snowball, "img/eternityquest/snowball.png");
+    
     assetManager.addAsset(weaponManager.icon.emp, "img/eternityquest/emp.png");
     assetManager.addAsset(weaponManager.icon.shield, "img/eternityquest/shield.png");
     assetManager.addAsset(weaponManager.icon.oracleBeam, "img/eternityquest/oracle-beam.png");
+    assetManager.addAsset(weaponManager.icon.snowflake, "img/eternityquest/snowflake.png");
     assetManager.addAsset(weaponManager.sprites.shield, "img/eternityquest/shield-effect.png");
     assetManager.addAsset(weaponManager.sprites.laserPulse, "img/eternityquest/laser-pulse.png");
+    assetManager.addAsset(weaponManager.sprites.blizzardEffect, "img/eternityquest/blizzard-effect.png");
     weaponManager.sprites.fireball = weaponManager.icon.fireball;
+    weaponManager.sprites.snowball = weaponManager.icon.snowball;
     weaponManager.initWeapons();
     //PROJECTILES
     projectileManager = new ProjectileManager();
@@ -327,6 +355,7 @@ function AssetManager(){
 
 //PROFILE MANAGER
 //profile0=Bob|000|0|0|10000|000
+//ter|101|96|1062|10000100|00000000
 // name | settings | highScore | gold | inventory | inventoryS
 function ProfileManager(){
     this.profileArray = [];
@@ -376,8 +405,8 @@ function Profile(name, slot){
     this.settings = "001";
     this.highScore = 0;
     this.gold = 0;
-    this.inventory = "00000";
-    this.inventoryS = "000";
+    this.inventory = "00000000";
+    this.inventoryS = "00000000";
     
     this.updateProfile = function(){
         this.name = avatar.name;
@@ -395,6 +424,16 @@ function Profile(name, slot){
         this.settings = this.dataArray[1];
         this.highScore = parseInt(this.dataArray[2]);
         this.gold = parseInt(this.dataArray[3]);
+        
+        //FIX OLD PROFILES
+        if(this.dataArray[4].length < 8){
+            var extra = 8 - this.dataArray[4].length;
+            for(var i = 0 ; i < extra ; i++){this.dataArray[4]+="0";}
+        }
+        if(this.dataArray[5].length < 8){
+            var extra = 8 - this.dataArray[5].length;
+            for(var i = 0 ; i < extra ; i++){this.dataArray[5]+="0";}
+        }
         this.inventory = this.dataArray[4];
         this.inventoryS = this.dataArray[5];
     };
@@ -563,14 +602,18 @@ function WeaponManager(){
         fireball: null,
         laser: null,
         ray: null,
+        snowball: null,
         emp: null,
         shield: null,
-        oracleBeam: null
+        oracleBeam: null,
+        snowflake: null
     };
     this.sprites = {
         fireball: null,
         shield: null,
-        laserPulse: null
+        snowball: null,
+        laserPulse: null,
+        blizzardEffect: null
     };
     this.weaponArrayP = [];  //PRIMARY WEAPONS
     this.weaponArrayS = [];  //SECONDARY WEAPONS
@@ -578,7 +621,7 @@ function WeaponManager(){
         this.weaponArrayP = [
             new WeaponPProjectileB("Blaster", weaponType.PROJECTILE_BASIC, 0,
                 this.icon.blaster, 
-                [0, 300, 500, 750, 1000, 0], //COST
+                [0, 100, 200, 250, 500, 0], //COST
                 [0, 1000, 1500, 2000, 2500, 3200], //OVER HEAT
                 [0, 2000, 2000, 1800, 1700, 1500], //COOL DOWN
                 [0, 5, 7, 10, 15, 20], //DMG
@@ -589,7 +632,7 @@ function WeaponManager(){
             ),
             new WeaponPProjectileB("Gatling Gun", weaponType.PROJECTILE_BASIC, 0,
                 this.icon.gatling, 
-                [500, 500, 800, 800, 1000, 0], //COST
+                [150, 200, 250, 400, 500, 0], //COST
                 [0, 3000, 4500, 4500, 5000, 5000], //OVER HEAT
                 [0, 2000, 1800, 1500, 1200, 1000], //COOL DOWN
                 [0, 2, 3, 4, 4, 5], //DMG
@@ -600,7 +643,7 @@ function WeaponManager(){
             ),
             new WeaponPProjectileSP("Fireball", weaponType.PROJECTILE_SP, 0,
                 this.icon.fireball, 
-                [500, 500, 750, 1000, 1300, 0], //COST
+                [180, 250, 300, 450, 550, 0], //COST
                 [0, 1000, 1250, 1600, 2000, 2700], //OVER HEAT
                 [0, 2000, 1950, 1800, 1700, 1600], //COOL DOWN
                 [0, 20, 25, 35, 40, 60], //DMG
@@ -612,7 +655,7 @@ function WeaponManager(){
             ),
             new WeaponPBeam("Laser", weaponType.BEAM, 0,
                 this.icon.laser, 
-                [1500, 800, 1200, 1700, 2300, 0], //COST
+                [300, 300, 400, 500, 600, 0], //COST
                 [0, 3000, 3500, 4000, 4500, 5000], //OVER HEAT
                 [0, 2000, 2000, 2000, 2000, 1800], //COOL DOWN
                 [0, 5, 5, 8, 12, 15], //TICK DMG
@@ -621,20 +664,32 @@ function WeaponManager(){
             ),
             new WeaponPBeam("Ray of Void", weaponType.BEAM, 0,
                 this.icon.ray, 
-                [1800, 1000, 1500, 2000, 2500, 0], //COST
+                [500, 450, 500, 600, 700, 0], //COST
                 [0, 4000, 4000, 4500, 5000, 5000], //OVER HEAT
                 [0, 5000, 4500, 4000, 3000, 2000], //COOL DOWN
                 [0, 10, 15, 20, 25, 35], //TICK DMG
                 [0, 100, 100, 90, 80, 70], //INTERVAL
                 3,6,ctxTool.clrBlue, audioSynth.synth.VOID //WIDTH-BASE //WIDTH-TICK //CLR //FX
+            ),
+            new WeaponPProjectileSP("Snowball", weaponType.PROJECTILE_SP, 0,
+                this.icon.snowball, 
+                [100, 150, 200, 250, 300, 0], //COST
+                [0, 1500, 1700, 2000, 2500, 3000], //OVER HEAT
+                [0, 1800, 1700, 1500, 1200, 1000], //COOL DOWN
+                [0, 18, 20, 25, 30, 35], //DMG
+                [0, 250, 230, 200, 190, 180], //INTERVAL
+                12*sizeManager.factor, //SPD
+                audioSynth.clip.FIREBALL, //SOUND FX
+                this.sprites.snowball, //SPRITE
+                50*sizeManager.factor, 50*sizeManager.factor  //WIDTH //HEIGHT
             )
         ];
         this.weaponArrayS = [
             new WeaponS("EMP", weaponType.SECONDARY, 0,
                 this.icon.emp,
-                [1000, 800, 900, 1000, 1200, 0], //COST
+                [300, 300, 400, 450, 500, 0], //COST
                 [0, 0, 0, 0, 0, 0], //OVER HEAT
-                [0, 20000, 18000, 15000, 12000, 7500], //COOL DOWN
+                [0, 15000, 13000, 10000, 7500, 5000], //COOL DOWN
                 [0, 10, 15, 20, 25, 25], //DMG
                 function(){
                     this.triggerS = true;
@@ -656,7 +711,7 @@ function WeaponManager(){
             ),
             new WeaponS("Shield", weaponType.SECONDARY, 0,
                 this.icon.shield,
-                [1100, 800, 900, 1000, 1200, 0], //COST
+                [500, 400, 450, 500, 600, 0], //COST
                 [0, 5000, 5000, 5000, 5000, 5000], //OVER HEAT
                 [0, 20000, 20000, 20000, 20000, 20000], //COOL DOWN
                 [0, 5, 8, 10, 15, 20], //DMG
@@ -689,10 +744,10 @@ function WeaponManager(){
             ),
             new WeaponS("Oracle Beam", weaponType.SECONDARY, 0,
             this.icon.oracleBeam,
-            [2300, 1000, 1200, 1500, 2000, 0], //COST
+            [750, 400, 500, 600, 750, 0], //COST
             [0, 4000, 4500, 4800, 5000, 5500], //OVER HEAT
             [0, 3000, 3000, 2800, 2500, 2000], //COOL DOWN
-            [0, 1, 3, 5, 7, 10], // TICK DMG
+            [0, 1, 2, 3, 5, 8], // TICK DMG
             function(){
                 this.triggerS = true;
                 //SOUD FX
@@ -738,6 +793,63 @@ function WeaponManager(){
             }, //EFFECT ANIMATION
             [[0,100,90,80,50,50], null, false] // CUSTOM VALUES
             //tickIntervals, lastticktime, tick
+            ),
+    new WeaponS("Blizzard", weaponType.SECONDARY, 0,
+            this.icon.snowflake,
+            [150, 250, 300, 350, 400, 0], //COST
+            [0, 4000, 4500, 5000, 5500, 6000], //OVER HEAT
+            [0, 5000, 4500, 4500, 4000, 4000], //COOL DOWN
+            [0, 1, 1, 1, 2, 2], // TICK DMG
+            function(){
+                this.triggerS = true;
+                //SOUD FX
+                audioSynth.playClipLoop(audioSynth.clip.BLIZZARD);
+                //SPD Modifier
+                enemyManager.spdModifier = this.values[3][this.lvl];
+                //MANAGE TICK
+                if(!this.values[1]){ this.values[1] = Date.now() - this.values[0][this.lvl]; }//lasttick
+                if(Date.now() > this.values[1] + this.values[0][this.lvl]){
+                    this.values[2] = true;
+                    this.values[1] = Date.now();
+                }else{ this.values[2] = false; }
+                //IF TICK
+                if(this.values[2]){
+                    for(var i = 0 ; i < enemyManager.enemyArray.length ; i++){
+                        enemyManager.enemyArray[i].hp -= this.dmg[this.lvl];
+                    }
+                    if(enemyManager.bossFight && enemyManager.boss){
+                        enemyManager.boss.hp -= this.dmg[this.lvl];
+                    }
+                }
+            }, //TRIGGER ON
+            function(){
+                this.triggerS = false;
+                //SOUND FX
+                audioSynth.stopClipLoop(audioSynth.clip.BLIZZARD);
+                //SPD Modifier
+                enemyManager.spdModifier = 1.0;
+            }, //TRIGGER OFF
+            function(){
+                if(this.triggerS){
+                    //Blizzard effect
+                    ctx.drawImage(weaponManager.sprites.blizzardEffect, 0, 0, canvas.width, canvas.height);
+                    //Origin
+                    ctxTool.circle(avatar.ax(), avatar.y, 10*sizeManager.factor, ctxTool.clrBlueT);
+                    //ICE EFFECT on Enemies
+                    var r = 30*sizeManager.factor;
+                    if(this.values[2]){ r = 35*sizeManager.factor; }
+                    for(var i = 0 ; i < enemyManager.enemyArray.length ; i++){
+                        var e = enemyManager.enemyArray[i];
+                        ctxTool.circle(e.ax(), e.ay(), r, ctxTool.clrBlueT);
+                    }
+                    if(enemyManager.bossFight && enemyManager.boss){
+                        var b = enemyManager.boss;
+                        ctxTool.circle(b.ax(), b.ay(), r, ctxTool.clrBlueT);
+                    }
+                }
+            }, //EFFECT ANIMATION
+            [[0,500,500,450,400,350], null, false, [0,0.5,0.4,0.3,0.2,0.1]] // CUSTOM VALUES
+            //tickIntervals, lastticktime, tick, speed slow
             )
         ];
         
@@ -953,6 +1065,8 @@ function EnemyManager(){
     this.hp = 5;
     this.gold = 1;
     
+    this.spdModifier = 1.0;
+    
     this.enemyCounter = 0;
     this.bossFight = false;
     this.boss = null;
@@ -1159,7 +1273,7 @@ function draw(){
 //LOADER
 function Loader(){
     this.msgStartTime = Date.now();
-    this.msgInterval = 1000;
+    this.msgInterval = 700;
     this.msg = "* * * * *";
     this.msgIndex = 0;
     this.msgArray = ["* * * * *", "Prismatic beams aligning", "Calibrating void lenses", "Phase crystals charged"];
@@ -2066,7 +2180,8 @@ function GameUI(){
         for(var i = 0 ; i < enemyManager.enemyArray.length ; i++){
             var e = enemyManager.enemyArray[i];
             //POSITIONING / MOVEMENT
-            e.y += e.ms;
+            var msM = enemyManager.spdModifier * e.ms;
+            e.y += msM;
             //BORDER COLLISION (Exit bottom)
             if(e.y >= gameUI.gameAreaYBtm){
                 enemyManager.enemyArray.splice(i,1);
@@ -2154,17 +2269,18 @@ function GameUI(){
             ctxTool.strokeRect(b.hbcx(), b.hbcy(), b.healthBarContainerW, b.healthBarContainerH, b.healthBarContainerLW, ctxTool.clrBlack);
             ctxTool.line(b.hbx(), b.hby(), b.hbxt(), b.hby(), b.healthBarH, ctxTool.clrRed2);
             //MOVEMENT
+            var msM = enemyManager.spdModifier * b.ms;
             if(b.y < 100*sizeManager.factor){
-                b.y += b.ms;
+                b.y += msM;
             }
             else{
                 b.y = 100*sizeManager.factor;
                 if(b.left){
-                    if(b.x > 0 ){ b.x -= b.ms; }
+                    if(b.x > 0 ){ b.x -= msM; }
                     else{ b.left = false; b.right = true; }
                 }
                 if(b.right){
-                    if(b.x < canvas.width-b.width){ b.x += b.ms; }
+                    if(b.x < canvas.width-b.width){ b.x += msM; }
                     else{ b.right= false; b.left = true; }
                 }
             }
@@ -2297,7 +2413,8 @@ function GameUI(){
         for(var i= 0 ; i < projectileManager.projectileArrayE.length ; i++){
             var p = projectileManager.projectileArrayE[i];
             //POSITION / MOVEMENT
-            p.y += p.ms;
+            var msM = enemyManager.spdModifier * p.ms;
+            p.y += msM;
             //RENDER PROJECTILE && COLLISIONS
             switch(p.type){
                 case weaponType.PROJECTILE_BASIC:
@@ -2419,16 +2536,16 @@ function drawGame(){
     if(avatar.loadout[2] && gameUI.fireS){ avatar.loadout[2].triggerOn(); }
     else if(avatar.loadout[2] && !gameUI.fireS){ avatar.loadout[2].triggerOff(); }
     
-    //PROJECTILE//Beam//EFFECT
-    gameUI.drawWeaponEffect();
-    gameUI.drawEnemyWeaponEffect();
-    
     //ENEMY
     gameUI.drawEnemy();
     //BOSS
     gameUI.drawBoss();
     //EXPLOSIONS
     gameUI.drawExplosions();
+    //PROJECTILE//Beam//EFFECT
+    gameUI.drawWeaponEffect();
+    gameUI.drawEnemyWeaponEffect();
+    
     //TRY SPAWN ENEMY
     enemyManager.spawn();
     //BARS
@@ -2515,11 +2632,13 @@ function CtxTool(){
     this.clrBlack = "#000000";
     this.clrWhite = "#ffffff";
     this.clrGrey = "#4a4a4a";
+    this.clrGreyT = "rgba(74, 74, 74, 0.5)";
     this.clrRed = "#9c1919";
     this.clrRed2 = "#ff0000";
     this.clrRedT = "rgba(156, 25, 25, 0.5)";
     this.clrYellow = "#ffff00";
     this.clrBlue = "#0078f8";
+    this.clrBlueT = "rgba(0, 120, 248, 0.5)";
     this.clrGreen = "#00ff00";
     this.clrGreenT = "rgba(0, 250, 0, 0.5)";
     this.circle = function(x,y,r,clr){
