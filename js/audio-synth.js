@@ -251,7 +251,7 @@ function AudioSynth(){
                     s[4].gain.cancelScheduledValues(0);
                     s[4].gain.setValueAtTime(0, startTime);
                     //Attack
-                    s[4].gain.linearRampToValueAtTime(0.5, startTime + attack);
+                    s[4].gain.linearRampToValueAtTime(0.05, startTime + attack);
                     //Decay to Sustain
                     s[4].gain.linearRampToValueAtTime(sustain, startTime + attack + decay);
                     
@@ -279,7 +279,7 @@ function AudioSynth(){
                     s[4].gain.cancelScheduledValues(0);
                     s[4].gain.setValueAtTime(0, startTime);
                     //Attack
-                    s[4].gain.linearRampToValueAtTime(0.5, startTime + attack);
+                    s[4].gain.linearRampToValueAtTime(0.05, startTime + attack);
                     //Decay to Sustain
                     s[4].gain.linearRampToValueAtTime(sustain, startTime + attack + decay);
                     
@@ -307,7 +307,7 @@ function AudioSynth(){
                     s[4].gain.cancelScheduledValues(0);
                     s[4].gain.setValueAtTime(0, startTime);
                     //Attack
-                    s[4].gain.linearRampToValueAtTime(0.5, startTime + attack);
+                    s[4].gain.linearRampToValueAtTime(0.05, startTime + attack);
                     //Decay to Sustain
                     s[4].gain.linearRampToValueAtTime(sustain, startTime + attack + decay);
                     break;
