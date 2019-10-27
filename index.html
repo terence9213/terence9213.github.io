@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
 To change this license header, choose License Headers in Project Properties.
 To change this template file, choose Tools | Templates
@@ -36,18 +36,6 @@ and open the template in the editor.
     </head>
     <body class="bg-dark">
         
-        <!-- HEADER// -->
-        <!--
-        <header>
-            <div class="sticky">
-                <div class="header">
-                    <h1>Terence's Resume</h1>
-                </div>
-            </div>
-        </header>
-        -->
-        <!-- //HEADER -->
-        
         <!-- MAIN BODY// -->
         <div class="main-body">
             
@@ -60,7 +48,7 @@ and open the template in the editor.
             <!--NAVBAR-->
             
             <!--OBLIGATORY IMAGE-->
-            <div class="img-holder">
+            <div class="img-holder" style="display:none">
                 <img src="img/resume/bg2.png" alt="img" class="img-fluid">
                 <div class="floating-text">
                     <h1>TERENCE</h1>
@@ -69,15 +57,26 @@ and open the template in the editor.
             </div>
             <!--OBLIGATORY IMAGE-->
             
-            <!-- Who am I -->
+            <!-- ??? -->
             <!--
-                Terence is a Information Systems graduate from Singapore Management University, and he is currently looking for a job.
-                If your company is short of talent, you've come to the right place.
+                HEY! Are you lost? You shouldn't be here.
             -->
             
             
             <div class="container">
                 <div class="segment">
+                    <div class="row about">
+                        <p>Congratulations! You have stumbled upon Terence’s website!</p>
+                        <p>Why waste time reading about him, when you can take a look at his <a href="#portfolio">portfolio</a>?</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="container">
+                <div class="segment">
+                    <div class="row">
+                        <h3>Who is Terence?</h3>
+                    </div>
                     <div class="row about">
                         <p>Terence is an Information Systems graduate from Singapore Management University.</p>
                         <p>An aspiring game developer, Terence makes up for his lack of industry experience with his enthusiasm and passion to learn. He is a creative problem solver who takes pride in his work.</p>
@@ -85,6 +84,7 @@ and open the template in the editor.
                     </div>
                 </div>
             </div>
+
             <!-- MAIN RESUME CONTENT -->
             <div class="container">
                 <!-- Education -->
@@ -151,6 +151,22 @@ and open the template in the editor.
                 <div class="segment">
                     <div class="row">
                         <h3>Experience</h3>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-10">
+                            <h5>Kioxia Singapore (Formerly known as Toshiba Memory Singapore), Analyst Programmer</h5>
+                        </div>
+                        <div class="col-md-2">
+                            <h5>Since Apr 2018</h5>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-10">
+                            <p> - Build business inteligence visulations</p>
+                            <p> - Build Leave Application System</p>
+                            <p> - Build Time Management System</p>
+                            <p> - Build auto printing solution for invoices</p>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-md-10">
@@ -237,7 +253,13 @@ and open the template in the editor.
                     <div class="row">
                         <div class="col-md-12">
                             <h4>Programming Languages</h4>
-                            <h5> - Java, C++, Ruby, Javascript, HTML, CSS, SQL</h5>
+                            <h5> - C#/ASP.NET, Java, Javascript, HTML/CSS, SQL</h5>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h4>Others</h4>
+                            <h5> - Visual Studios, Photoshop, Audacity, Unity, Abelton</h5>
                         </div>
                     </div>
                 </div>
@@ -250,13 +272,14 @@ and open the template in the editor.
                     <div class="row">
                         <div class="col-md-12">
                             <h5>Rock climbing and bouldering</h5>
-                            <h5>Amateur music production/composition</h5>
+                            <h5>Amateur music composition</h5>
+                            <h5>Amateur guitarist</h5>
                         </div>
                     </div>
                 </div>
                 
                 <!--PORTFOLIO-->
-                <div class="segment">
+                <div class="segment" id="portfolio">
                     <div class="row">
                         <h3>Portfolio</h3>
                     </div>
