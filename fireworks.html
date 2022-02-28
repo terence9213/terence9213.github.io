@@ -1,0 +1,153 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Fireworks</title>
+    <script src="js/audio-synth-custom-fireworks.js"></script>
+    <script src="js/fireworks.js"></script>
+
+    <style type="text/css">
+        @font-face {
+            font-family: segoe;
+            src: url(font/SEGOEUI.ttf);
+        }
+
+        /* DISABLE DEFAULT SCROLLBAR */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* MAIN CONATINER */
+        body {
+            font-family: segoe;
+            background-color: grey;
+            /* cursor: url(Images/feather-s.png) 0 32, auto; */
+        }
+
+        /* FIXED HEADER */
+        .fixed-header {
+            position: fixed;
+            top: 50px;
+            width: 100%;
+            z-index: 100;
+        }
+
+        /* MAIN CONTENTS */
+        .main-container {
+            margin-top: 50px;
+            z-index: 10;
+        }
+
+
+        /* Animation Effects */
+        .bg-effects-container {
+            position: fixed;
+            overflow: hidden;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            z-index: -1;
+        }
+
+        .star {
+            position: absolute;
+            border-radius: 50%;
+            background-color: white;
+            -webkit-box-shadow: 0 0 5px 3px white;
+            -moz-box-shadow: 0 0 5px 3px white;
+            box-shadow: 0 0 5px 3px white;
+            -webkit-animation: blink ease-in-out 2s infinite;
+            -moz-animation: blink ease-in-out 2s infinite;
+            -o-animation: blink ease-in-out 2s infinite;
+            animation: blink ease-in-out 2s infinite;
+        }
+
+        @keyframes blink {
+            0% {
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+            }
+        }
+
+        .shooting-star {
+            width: 1px;
+            height: 1px;
+            border-radius: 50%;
+            position: absolute;
+            background-color: yellow;
+            -webkit-box-shadow: 0 0 10px 3px white;
+            -moz-box-shadow: 0 0 10px 3px white;
+            box-shadow: 0 0 10px 3px white;
+        }
+
+            .shooting-star::after {
+                position: absolute;
+                display: block;
+                content: "";
+                width: 100px;
+                height: 100px;
+                left: -15px;
+                top: -35px;
+                height: 1px;
+                -webkit-transform: rotate(-45deg);
+                -ms-transform: rotate(-45deg);
+                transform: rotate(-45deg);
+                background: linear-gradient(to left, rgba(0,0,0,0) 0%,rgba(255,255,255,0.4) 100%);
+            }
+
+        /* CANVAS */
+        #canvas{
+            position: fixed;
+            top: 0;
+            left: 0;
+            /*width: 1366px;*/
+            /*width: 1024px;*/
+            width: 100%;
+            /*height: 657px;*/
+            /*height: 697px;*/
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="main">
+        <!-- FIXED HEADER -->
+        <div class="fixed-header">
+
+            <!-- TIME DILATION SLIDER -->
+            <div style="position:absolute;">
+                <input id="time-slider" style="width:500px"
+                    name="slider" class="slider" type="range" min="0" max="1" value="1" step="0.01" 
+                    oninput="Utils.Canvas.SetDilationFactor(this.value)" >
+            </div>
+            <!-- TIME DILATION SLIDER -->
+
+        </div>
+        <!-- FIXED HEADER -->
+
+        <!-- MAIN CONTAINER -->
+        <div class="main-container">
+        </div>
+        <!-- MAIN CONTAINER -->
+
+        <!-- BACKGOUND EFFECTS -->
+        <div id="bg-effects" class="bg-effects-container">
+        </div>
+        <!-- BACKGOUND EFFECTS -->
+
+        <!-- CANVAS -->
+        <canvas id="canvas" class="canvas"></canvas>
+        <!-- CANVAS -->
+
+    </div>
+</body>
+</html>
