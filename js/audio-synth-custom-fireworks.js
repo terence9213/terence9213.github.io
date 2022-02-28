@@ -19,8 +19,8 @@ function AudioSynth(){
     
     var loopFiles = [];
                  
-    var clipFiles = ["fireworks/audio/woosh.ogg",
-					"fireworks/audio/bang.ogg"];
+    var clipFiles = ["audio/fireworks/woosh.ogg",
+					"audio/fireworks/bang.ogg"];
 
     var loopBufferArray = [];
     var clipBufferArray = [];
