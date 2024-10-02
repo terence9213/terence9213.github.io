@@ -52,11 +52,13 @@ div.about p{
     font-size: 20px;
 }
 body.bg-dark{
-    background-color: #332222;
+    background-color: #352020;
     color: #ffffff;
 }
 .main-body{
     margin-top: 80px;
+    font-family: "Inconsolata", monospace;
+    font-weight: 450;
 }
 
 div.segment{
@@ -66,7 +68,7 @@ div.segment{
     padding-bottom: 10px;
     padding-left: 20px;
     padding-right: 20px;
-    background-color: #505050;
+    background-color: #302020;
 }
 /*OVERWRITE*/
 div.row{
