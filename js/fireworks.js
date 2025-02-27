@@ -14,6 +14,7 @@ var Utils = {
         FPS: 0,
         FPSDisplay: 0,
         DilationFactor: 1,
+        TargetDilationFactor: 1,
         ShowStats: true,
         canvas: null,
         ctx: null,
@@ -69,10 +70,12 @@ var Utils = {
             }
         },
         SetDilationFactor: function (factor) {
-            Utils.Canvas.DilationFactor = factor;
+            Utils.Canvas.TargetDilationFactor = factor;
         },
         //MAIN RENDER FUNCTION
         RenderFrame: function () {
+            //Resolve Dilation Factor
+            Utils.Canvas.DilationFactor = Utils.Canvas.TargetDilationFactor; 
             //FPS CALCULATION
             var DELTA = Utils.Canvas.LastFrameTimeStamp ? performance.now() - Utils.Canvas.LastFrameTimeStamp : 0;
             Utils.Canvas.ElapsedTime += DELTA * Utils.Canvas.DilationFactor;
